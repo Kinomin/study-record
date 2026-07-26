@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>学習記録</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#FDFCF8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="学習記録">
+<meta name="description" content="タスクとテストの点数を、端末の中だけで記録します。">
+<style>
+/* ============================================================
+   依存ゼロ。外部からの読み込みは一切ない。
+   フォントはOS標準のみ。通信コードを含まない。
+   ============================================================ */
+:root{
+  --paper:#FFFDF8; --ink:#1A1D21; --ink-soft:#5A6169; --ink-faint:#9AA2A9;
+  --red:#D9342A; --indigo:#2A5D8A; --rule:#E4E1D8; --panel:#F7F5EF; --gold:#B8860B;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP","Meiryo",sans-serif;
+  font-size:15px;line-height:1.7;overscroll-behavior-y:none;
+}
+
+button,input,select,textarea{font:inherit;color:inherit;}
+button{background:none;border:0;padding:0;cursor:pointer;}
+:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+
+/* layout */
+#app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;}
+.view{flex:1;padding:14px 18px calc(84px + var(--safe-b));}
+.vhead{padding-top:10px;}
+.eyebrow{font-size:11px;letter-spacing:.16em;color:var(--ink-faint);margin:0 0 2px;}
+h1.t{font-size:23px;font-weight:800;margin:0 0 3px;letter-spacing:.01em;}
+p.sub{font-size:12.5px;color:var(--ink-soft);margin:0 0 16px;}
+.sec{font-size:11px;letter-spacing:.14em;color:var(--ink-faint);margin:20px 0 6px;}
+
+/* tabs */
+nav#tabs{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;display:flex;
+  background:rgba(247,245,239,.97);border-top:1px solid var(--rule);
+  padding-bottom:var(--safe-b);backdrop-filter:blur(8px);
+}
+nav#tabs button{flex:1;padding:10px 0 12px;font-size:10.5px;color:var(--ink-faint);}
+nav#tabs button.on{color:var(--red);font-weight:700;box-shadow:inset 0 2px 0 var(--red);}
+nav#tabs.hide{display:none;}
+
+/* controls */
+.field{border-bottom:1px solid var(--rule);padding:10px 0;}
+.field label{display:block;font-size:10px;letter-spacing:.12em;color:var(--ink-faint);margin-bottom:2px;}
+.field input[type=text],.field input[type=number],.field input[type=date],.field textarea,.field select{
+  width:100%;border:0;background:transparent;padding:2px 0;font-size:16px;font-weight:500;
+}
+.field textarea{resize:vertical;min-height:44px;font-weight:400;font-size:15px;}
+.hint{font-size:11px;color:var(--ink-faint);margin-top:5px;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+.chip{border:1px solid var(--rule);border-radius:99px;padding:5px 12px;font-size:12.5px;color:var(--ink-soft);background:#fff;}
+.chip.on{border-color:var(--ink);background:var(--ink);color:#fff;}
+.chip.add{border-style:dashed;color:var(--ink-faint);}
+.btn{display:block;width:100%;text-align:center;background:var(--ink);color:#fff;border-radius:11px;padding:14px;font-size:14.5px;font-weight:700;margin-top:16px;}
+.btn.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--rule);font-weight:500;}
+.btn.red{background:var(--red);}
+.btn[disabled]{background:#E6E3DB;color:#A7ADB2;cursor:default;}
+.btn.sm{padding:10px;font-size:13px;margin-top:10px;}
+.row2{display:flex;gap:10px;}
+.row2 .btn{margin-top:12px;}
+
+/* list */
+.item{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--rule);}
+.item .body{flex:1;min-width:0;}
+.item .tt{font-size:14.5px;font-weight:500;word-break:break-word;}
+.item .tt.done{color:var(--ink-faint);text-decoration:line-through;text-decoration-color:var(--red);}
+.item .mm{font-size:11px;color:var(--ink-faint);margin-top:1px;}
+.cbx{width:22px;height:22px;border:1.5px solid #B9C0C6;border-radius:6px;flex:none;margin-top:2px;position:relative;}
+.cbx.on{border-color:var(--red);background:var(--red);}
+.cbx.on::after{content:"";position:absolute;left:7px;top:3px;width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg);}
+.tag{font-size:10px;padding:1px 7px;border-radius:4px;background:#EEF2F4;color:var(--indigo);margin-left:4px;white-space:nowrap;}
+.tag.due{background:#FBE6E4;color:var(--red);}
+.tag.max{background:#F1EEE4;color:#7A6314;}
+.tag.mute{background:#EFEDE7;color:#8E959B;}
+.bar{height:6px;border-radius:99px;background:#EDEAE2;overflow:hidden;margin-top:6px;}
+.bar i{display:block;height:100%;background:var(--indigo);}
+.bar i.low{background:var(--red);}
+.empty{text-align:center;color:var(--ink-faint);font-size:13px;padding:30px 10px;border:1px dashed var(--rule);border-radius:12px;margin-top:12px;}
+
+/* maru */
+.maru{position:relative;display:inline-flex;align-items:center;justify-content:center;}
+.maru svg{position:absolute;inset:-16% -12%;width:124%;height:132%;overflow:visible;}
+.maru svg path{fill:none;stroke:var(--red);stroke-width:3.2;stroke-linecap:round;stroke-dasharray:300;stroke-dashoffset:300;animation:draw .95s .15s cubic-bezier(.6,.1,.3,1) forwards;}
+@keyframes draw{to{stroke-dashoffset:0}}
+.maru .n{color:var(--red);font-weight:800;line-height:1;letter-spacing:-.02em;}
+.big .n{font-size:56px;}
+.sm .n{font-size:21px;}
+.plain{font-weight:700;font-size:21px;color:var(--ink-soft);}
+.plain.big{font-size:52px;color:var(--ink);}
+@media (prefers-reduced-motion:reduce){.maru svg path{animation:none;stroke-dashoffset:0}}
+
+/* cards */
+.card{border:1px solid var(--rule);border-radius:12px;padding:13px 14px;background:#fff;margin-top:12px;}
+.card.ink{border-color:var(--ink);}
+.note{border:1px dashed #C9CFD3;border-radius:10px;padding:10px 12px;font-size:12px;color:var(--ink-soft);background:#FAF9F4;margin-top:12px;}
+.note b{color:var(--ink);}
+.warn{border-left:3px solid var(--red);background:#FCF1EF;padding:10px 12px;font-size:12.5px;color:#7E2B23;margin:12px 0;border-radius:0 8px 8px 0;}
+.info{border-left:3px solid var(--gold);background:#FFF8E1;padding:10px 12px;font-size:12.5px;color:#7A6314;margin:12px 0;border-radius:0 8px 8px 0;}
+.stat{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--rule);font-size:13px;}
+.stat:last-child{border-bottom:0;}
+.stat b{font-weight:700;font-size:15px;}
+.goalv{font-size:32px;font-weight:800;letter-spacing:-.01em;}
+.sw{width:44px;height:26px;border-radius:99px;background:#D8DCE0;position:relative;flex:none;transition:background .15s;}
+.sw.on{background:var(--red);}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:99px;background:#fff;transition:left .15s;}
+.sw.on::after{left:21px;}
+.rowsplit{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--rule);}
+.rowsplit .k{font-size:14px;font-weight:500;}
+.rowsplit .d{font-size:11.5px;color:var(--ink-faint);}
+
+/* lock */
+#lock{position:fixed;inset:0;z-index:100;background:#161A18;color:#E9E6DC;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+#lock .dots{display:flex;gap:16px;margin:26px 0 30px;}
+#lock .dot{width:12px;height:12px;border-radius:99px;border:1.5px solid #7C8A80;}
+#lock .dot.f{background:#E9E6DC;border-color:#E9E6DC;}
+#lock .pad{display:grid;grid-template-columns:repeat(3,72px);gap:16px;}
+#lock .pad button{font-size:24px;color:#E9E6DC;padding:14px 0;border-radius:99px;border:1px solid rgba(233,230,220,.18);}
+#lock .pad button.blank{border:0;}
+#lock .pad button.small{font-size:13px;border:0;color:#8FA095;}
+#lock .msg{font-size:12.5px;color:#8FA095;min-height:20px;}
+
+/* modal */
+#modal{position:fixed;inset:0;z-index:90;background:rgba(20,24,22,.5);display:flex;align-items:flex-end;justify-content:center;}
+#modal .sheet{background:var(--paper);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:20px 18px calc(24px + var(--safe-b));max-height:90vh;overflow:auto;}
+.hidden{display:none !important;}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + var(--safe-b));
+  z-index:120;background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;
+  max-width:88%;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:tin .2s ease-out;}
+.toast.out{opacity:0;transition:opacity .3s;}
+@keyframes tin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+#install{position:fixed;left:12px;right:12px;bottom:calc(70px + var(--safe-b));z-index:50;
+  max-width:536px;margin:0 auto;background:var(--ink);color:#fff;border-radius:12px;
+  padding:12px 14px;font-size:12.5px;line-height:1.6;box-shadow:0 10px 30px rgba(0,0,0,.25);
+  display:flex;gap:10px;align-items:center;}
+#install b{font-weight:700;}
+#install button{color:#fff;opacity:.65;font-size:12px;flex:none;padding:4px 6px;}
+
+/* print sheet */
+#printarea{display:none;}
+@media print{
+  body::before{display:none;}
+  #app,nav#tabs,#lock,#modal{display:none !important;}
+  #printarea{display:block !important;padding:0;}
+  @page{size:A4 portrait;margin:14mm;}
+}
+#sheetpreview{background:#fff;border:1px solid var(--rule);padding:14px;margin-top:12px;font-size:11px;}
+.sheet-h{font-size:14px;font-weight:800;margin:0 0 2px;}
+.sheet-m{font-size:10px;color:var(--ink-faint);margin-bottom:8px;}
+table.sh{width:100%;border-collapse:collapse;font-size:11px;}
+table.sh th{text-align:left;border-bottom:1.5px solid var(--ink);padding:4px 2px;font-weight:600;font-size:10px;}
+table.sh td{border-bottom:1px solid var(--rule);padding:4px 2px;}
+table.sh td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.freebox{border:1px solid var(--rule);height:70px;margin-top:8px;}
+</style>
+</head>
+<body>
+
+<div id="app"><div class="view" id="view"></div></div>
+<nav id="tabs" class="hide"></nav>
+<div id="lock" class="hidden"></div>
+<div id="modal" class="hidden"></div>
+<div id="printarea"></div>
+<div id="install" class="hidden"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   1. 保存層
+   IndexedDB を第一とし、失敗時のみメモリ上に保持する。
+   通信は行わない。fetch / XMLHttpRequest は使用しない。
+   ============================================================ */
+const Store = (() => {
+  const DB="study_local", ST="kv", KEY="state";
+  let db=null, mem=null, ok=false;
+  function open(){
+    return new Promise(res=>{
+      if(!("indexedDB" in window)) return res(false);
+      let r;
+      try{ r=indexedDB.open(DB,1); }catch(e){ return res(false); }
+      r.onupgradeneeded=()=>{ r.result.createObjectStore(ST); };
+      r.onsuccess=()=>{ db=r.result; ok=true; res(true); };
+      r.onerror=()=>res(false);
+      setTimeout(()=>{ if(!ok) res(false); },2500);
+    });
+  }
+  function get(k){
+    k=k||KEY;
+    return new Promise(res=>{
+      if(!db) return res(k===KEY? mem : null);
+      try{
+        const tx=db.transaction(ST,"readonly").objectStore(ST).get(k);
+        tx.onsuccess=()=>res(tx.result ?? (k===KEY? mem : null));
+        tx.onerror=()=>res(k===KEY? mem : null);
+      }catch(e){ res(k===KEY? mem : null); }
+    });
+  }
+  function set(v,k){
+    k=k||KEY;
+    if(k===KEY) mem=v;
+    return new Promise(res=>{
+      if(!db) return res(false);
+      try{
+        const tx=db.transaction(ST,"readwrite").objectStore(ST).put(v,k);
+        tx.onsuccess=()=>res(true);
+        tx.onerror=()=>res(false);
+      }catch(e){ res(false); }
+    });
+  }
+  return {open,get,set,persistent:()=>ok};
+})();
+
+/* ============================================================
+   2. 状態
+   ============================================================ */
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const KINDS={small:"小テスト",unit:"単元テスト",term:"定期テスト"};
+const TASKKINDS={hw:"課題",submit:"提出物",item:"持ち物",exam:"テスト予告"};
+
+let S=null, dirty=false, lockTimer=null, lastActive=Date.now();
+
+/* ------------------------------------------------------------
+   データ形式の版と、その移行
+   構造を変えるときは SCHEMA を上げ、MIGRATIONS に一段ずつ足す。
+   移行の前には、必ず元の状態を別のキーに退避する。
+   ------------------------------------------------------------ */
+const SCHEMA=2;
+function blank(){
+  return {
+    v:SCHEMA, students:[], activeId:null, subjects:[], tests:[], records:[], tasks:[],
+    settings:{ pass:null, failCount:0, lockUntil:null, autoLock:3, lastExport:null,
+               grouped:{}, goals:{}, remindExport:true }
+  };
+}
+const MIGRATIONS={
+  // v1 → v2：設定項目の追加と、参照切れの掃除
+  1(st){
+    st.settings=st.settings||{};
+    if(st.settings.failCount==null) st.settings.failCount=0;
+    if(st.settings.lockUntil==null) st.settings.lockUntil=null;
+    const tid=new Set((st.tests||[]).map(t=>t.id));
+    const sid=new Set((st.students||[]).map(s=>s.id));
+    st.records=(st.records||[]).filter(r=>tid.has(r.testId)&&sid.has(r.studentId));
+    st.tasks=(st.tasks||[]).filter(t=>sid.has(t.studentId));
+    st.tests=(st.tests||[]).filter(t=>sid.has(t.studentId));
+    return st;
+  }
+};
+function migrate(raw){
+  let st;
+  try{ st=JSON.parse(JSON.stringify(raw)); }catch(e){ return {error:"broken"}; }
+  if(typeof st.v!=="number") st.v=1;
+  if(st.v>SCHEMA) return {error:"newer", found:st.v};
+  const from=st.v;
+  while(st.v<SCHEMA){
+    const step=MIGRATIONS[st.v];
+    if(!step){ st.v=SCHEMA; break; }
+    try{ st=step(st); }catch(e){ return {error:"failed", at:st.v}; }
+    st.v++;
+  }
+  const out=Object.assign(blank(),st);
+  out.settings=Object.assign(blank().settings, st.settings||{});
+  out.v=SCHEMA;
+  return {state:out, migrated: from!==SCHEMA, from};
+}
+function save(){
+  dirty=true;
+  clearTimeout(save._t);
+  save._t=setTimeout(()=>{ Store.set(S).then(()=>{dirty=false;}); },250);
+}
+/* 追加・削除・記録の確定など、直後に画面が変わる操作で使う即時保存 */
+async function saveNow(){
+  clearTimeout(save._t);
+  dirty=false;
+  await Store.set(S);
+}
+const me = ()=> S.students.find(s=>s.id===S.activeId) || S.students[0] || null;
+const mine = arr => arr.filter(x=>x.studentId===S.activeId);
+
+/* 日付ユーティリティ */
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today=()=>iso(new Date());
+function addDays(s,n){ const d=new Date(s+"T00:00:00"); d.setDate(d.getDate()+n); return iso(d); }
+const WD=["日","月","火","水","木","金","土"];
+function fmt(s,withYear){
+  if(!s) return "";
+  const d=new Date(s+"T00:00:00");
+  const base=`${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）`;
+  return withYear? `${d.getFullYear()}年 ${base}` : base;
+}
+function diffDays(a,b){ return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/86400000); }
+function relDay(s){
+  const d=diffDays(today(),s);
+  if(d===0) return "今日"; if(d===1) return "明日"; if(d===-1) return "昨日";
+  if(d<0) return `${-d}日前`; return `${d}日後`;
+}
+
+/* ============================================================
+   3. 統計
+   記述統計のみ。回帰は傾向の判定と目標の算出にのみ用い、
+   点数の予測値としては表示しない。
+   ============================================================ */
+const MIN_N=5; // これ未満では傾向も目標も出さない
+
+function recordsOf(testIds){
+  return mine(S.records).filter(r=>testIds.includes(r.testId))
+    .slice().sort((a,b)=> a.date<b.date?-1: a.date>b.date?1:0);
+}
+function mean(a){ return a.length? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+function median(a){
+  if(!a.length) return 0;
+  const s=a.slice().sort((x,y)=>x-y), m=s.length>>1;
+  return s.length%2? s[m] : (s[m-1]+s[m])/2;
+}
+function slope(ys){ // 単回帰の傾き（x は 0,1,2...）
+  const n=ys.length; if(n<2) return 0;
+  const mx=(n-1)/2, my=mean(ys);
+  let num=0,den=0;
+  for(let i=0;i<n;i++){ num+=(i-mx)*(ys[i]-my); den+=(i-mx)*(i-mx); }
+  return den? num/den : 0;
+}
+function analyze(tests){
+  const ids=tests.map(t=>t.id), rs=recordsOf(ids);
+  if(!rs.length) return null;
+  const maxOf=id=>(S.tests.find(t=>t.id===id)||{max:100}).max;
+  const rates=rs.map(r=>r.score/maxOf(r.testId)*100);
+  const sameMax=tests.every(t=>t.max===tests[0].max);
+  const max=tests[0].max;
+  const scores=rs.map(r=>r.score);
+  const last3=scores.slice(-3), last3r=rates.slice(-3);
+  const a={
+    n:rs.length, records:rs, rates, sameMax, max,
+    avgRate:mean(rates), medRate:median(rates), avgScore:mean(scores),
+    best:sameMax? Math.max(...scores):null,
+    bestRate:Math.max(...rates),
+    recent3:sameMax? mean(last3):null, recent3Rate:mean(last3r),
+    enough: rs.length>=MIN_N, trend:null, goal:null, goalNote:""
+  };
+  if(a.enough){
+    const win=rates.slice(-10), sl=slope(win);
+    a.trend = sl>1.2? "上向き" : sl<-1.2? "やや下向き" : "横ばい";
+    a.slope=sl;
+    // 目標は素点で示す。まとめて見ている場合は、いま使っているテストの満点に換算する。
+    const cm = sameMax? max : maxOf(rs[rs.length-1].testId);
+    const base = sameMax? a.recent3 : a.recent3Rate/100*cm;
+    const bestS = sameMax? a.best : Math.round(a.bestRate/100*cm);
+    const step=Math.max(1,Math.round(cm*0.06));
+    let g=Math.min(cm, Math.ceil(base)+step);
+    if(bestS>=cm){ g=cm; a.goalNote="満点をもう一度"; }
+    else if(g<=bestS){ g=bestS+1; a.goalNote="自己ベスト更新"; }
+    else a.goalNote=`直近の平均より${g-Math.round(base)}点上`;
+    a.goal=Math.min(g,cm);
+    a.goalMax=cm;
+  }
+  return a;
+}
+/* まとめて見る：教科＋テスト名が同一のものを束ねる */
+const gkey = t => `${t.subjectId||"-"}::${t.name}`;
+function groupsFor(studentId){
+  const map=new Map();
+  S.tests.filter(t=>t.studentId===studentId).forEach(t=>{
+    const k=gkey(t);
+    if(!map.has(k)) map.set(k,[]);
+    map.get(k).push(t);
+  });
+  return map;
+}
+function testsForAnalysis(t){
+  const k=gkey(t);
+  if(S.settings.grouped[k]){
+    return S.tests.filter(x=>x.studentId===t.studentId && gkey(x)===k);
+  }
+  return [t];
+}
+const subName=id=>(S.subjects.find(s=>s.id===id)||{name:"—"}).name;
+
+/* ============================================================
+   4. 暗号（書き出し／読み込み・パスコード）
+   ============================================================ */
+const enc=new TextEncoder(), dec=new TextDecoder();
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b)));
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function keyFrom(pass,salt,iter){
+  const km=await crypto.subtle.importKey("raw",enc.encode(pass),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:iter,hash:"SHA-256"},km,
+    {name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+async function encryptJSON(obj,pass){
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await keyFrom(pass,salt,250000);
+  const data=enc.encode(JSON.stringify(obj));
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,data);
+  const sum=await crypto.subtle.digest("SHA-256",data);
+  return {f:"study-backup",v:1,alg:"AES-GCM/PBKDF2-250k",
+    salt:b64(salt),iv:b64(iv),data:b64(ct),check:code(sum)};
+}
+async function decryptJSON(file,pass){
+  const key=await keyFrom(pass,unb64(file.salt),250000);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(file.iv)},key,unb64(file.data));
+  return {obj:JSON.parse(dec.decode(pt)), check:code(await crypto.subtle.digest("SHA-256",pt))};
+}
+function code(buf){
+  const h=[...new Uint8Array(buf)].slice(0,6).map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
+  return `${h.slice(0,4)}-${h.slice(4,8)}-${h.slice(8,12)}`;
+}
+async function hashPass(p,saltB64){
+  const salt=saltB64? unb64(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+  const km=await crypto.subtle.importKey("raw",enc.encode(p),"PBKDF2",false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:200000,hash:"SHA-256"},km,256);
+  return {salt:b64(salt),hash:b64(bits)};
+}
+
+/* ============================================================
+   5. 画面
+   ============================================================ */
+const V=document.getElementById("view");
+const TABS=document.getElementById("tabs");
+let route="tasks", ctx={};
+
+function go(r,c={}){ route=r; ctx=c; render(); window.scrollTo(0,0); }
+function clearHandlers(){ V.onclick=null; }
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const MARU='<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 7C77 7,94 25,93 50C92 75,74 93,49 93C25 93,7 74,7 49C7 25,23 8,54 7"/></svg>';
+
+/* ------------------------------------------------------------
+   画面内ダイアログ
+   ブラウザ標準の prompt / confirm / alert は、環境によっては
+   無効化される（表示されないまま null が返る）。入力手段が
+   そこに依存していると、機能そのものが動かなくなるため使わない。
+   ------------------------------------------------------------ */
+const MODAL=document.getElementById("modal");
+function closeModal(){ MODAL.classList.add("hidden"); MODAL.innerHTML=""; MODAL.onclick=null; }
+function dialog(html,setup){
+  return new Promise(res=>{
+    MODAL.innerHTML=`<div class="sheet">${html}</div>`;
+    MODAL.classList.remove("hidden");
+    const done=v=>{ closeModal(); res(v); };
+    MODAL.onclick=async e=>{ if(e.target===MODAL) done(null); };
+    try{ setup(MODAL.querySelector(".sheet"),done); }catch(e){ done(null); }
+  });
+}
+function ask(label,value,opt){
+  opt=opt||{};
+  return dialog(`
+    <p style="font-size:16px;font-weight:700;margin:0 0 2px">${esc(label)}</p>
+    ${opt.note?`<p style="font-size:12px;color:var(--ink-soft);margin:0 0 4px">${esc(opt.note)}</p>`:""}
+    <div class="field"><input id="mi" type="${opt.type||"text"}"
+      ${opt.mode?`inputmode="${opt.mode}"`:""} ${opt.max?`maxlength="${opt.max}"`:""}
+      value="${esc(value==null?"":value)}" placeholder="${esc(opt.ph||"")}" autocomplete="off"></div>
+    <div class="row2"><button class="btn ghost" id="mc">やめる</button><button class="btn" id="mo">決定</button></div>`,
+  (el,done)=>{
+    const i=el.querySelector("#mi");
+    setTimeout(()=>{ try{ i.focus(); }catch(e){} },60);
+    el.querySelector("#mo").onclick=()=>done(i.value);
+    el.querySelector("#mc").onclick=()=>done(null);
+    i.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); done(i.value); } };
+  });
+}
+function ok(msg,opt){
+  opt=opt||{};
+  return dialog(`
+    <p style="font-size:16px;font-weight:700;margin:0 0 6px">${esc(opt.title||"確認")}</p>
+    <p style="font-size:13.5px;color:var(--ink-soft);margin:0;white-space:pre-wrap">${esc(msg)}</p>
+    <div class="row2"><button class="btn ghost" id="mc">やめる</button>
+      <button class="btn ${opt.danger?"red":""}" id="mo">${esc(opt.okLabel||"はい")}</button></div>`,
+  (el,done)=>{
+    el.querySelector("#mo").onclick=()=>done(true);
+    el.querySelector("#mc").onclick=()=>done(false);
+  }).then(v=>v===true);
+}
+function toast(msg){
+  try{
+    const el=document.createElement("div");
+    el.className="toast"; el.textContent=String(msg);
+    document.body.appendChild(el);
+    setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(),320); },2300);
+  }catch(e){}
+  return Promise.resolve();
+}
+/* 要素が無くても以降の処理が止まらないようにする */
+function $(sel){ return V.querySelector(sel) || {}; }
+function scoreMark(score,best,cls){
+  const hit = best===null || score>=best;
+  return hit
+    ? `<span class="maru ${cls}">${MARU}<span class="n">${score}</span></span>`
+    : `<span class="plain ${cls}">${score}</span>`;
+}
+
+function render(){
+  clearHandlers();
+  try{ draw(); }
+  catch(err){
+    console.error(err);
+    V.innerHTML=`<div class="vhead"><h1 class="t">画面を表示できませんでした</h1>
+      <p class="sub">記録は消えていません。</p></div>
+      <div class="warn">${esc((err&&err.message)||String(err))}</div>
+      <button class="btn ghost" id="rl">開き直す</button>`;
+    const rl=V.querySelector("#rl"); if(rl) rl.onclick=()=>location.reload();
+  }
+}
+function draw(){
+  if(!S.students.length){ TABS.classList.add("hide"); return viewSetup(); }
+  TABS.classList.remove("hide");
+  TABS.innerHTML=[["tasks","やること"],["rec","記録"],["ana","分析"],["set","設定"]]
+    .map(([k,l])=>`<button data-tab="${k}" class="${route.startsWith(k)?"on":""}">${l}</button>`).join("");
+  ({tasks:viewTasks,taskadd:viewTaskAdd,rec:viewRec,recnew:viewTestNew,recdone:viewRecDone,
+    recmanage:viewManage,reclist:viewList,ana:viewAna,set:viewSet,sheet:viewSheet,transfer:viewTransfer
+   }[route]||viewTasks)();
+}
+TABS.addEventListener("click",e=>{
+  const b=e.target.closest("[data-tab]"); if(!b) return;
+  go(b.dataset.tab==="rec"?"rec":b.dataset.tab);
+});
+
+/* ---------- 初回設定 ---------- */
+function viewSetup(){
+  V.innerHTML=`
+  <div class="vhead"><p class="eyebrow">1 / 2</p><h1 class="t">使う人を登録</h1>
+  <p class="sub">名前はこの端末の中だけで使います。</p></div>
+  <div class="field"><label>名前</label><input id="nm" type="text" placeholder="ゆうた" autocomplete="off"></div>
+  <div class="field"><label>学年</label>
+    <div class="chips" id="gr">${["中1","中2","中3","高1","高2","高3"].map((g,i)=>`<button class="chip${i===1?" on":""}" data-g="${g}">${g}</button>`).join("")}</div>
+  </div>
+  <div class="field"><label>学校名（任意）</label><input id="sc" type="text" placeholder="未入力" autocomplete="off"></div>
+  <div class="note"><b>アカウントは作りません。</b>メールアドレスもパスワードも登録不要。記録はこの端末の中にだけ保存され、外に送信されません。</div>
+  <button class="btn" id="go">次へ：パスコードを決める</button>`;
+  let grade="中2";
+  V.querySelector("#gr").addEventListener("click",e=>{
+    const b=e.target.closest("[data-g]"); if(!b) return;
+    V.querySelectorAll("#gr .chip").forEach(c=>c.classList.remove("on"));
+    b.classList.add("on"); grade=b.dataset.g;
+  });
+  $("#go").onclick=async ()=>{
+    const name=V.querySelector("#nm").value.trim();
+    if(!name) return toast("名前を入れてください");
+    const id=uid();
+    S.students.push({id,name,grade,school:V.querySelector("#sc").value.trim()});
+    S.activeId=id; save(); setupPass();
+  };
+}
+function setupPass(){
+  V.innerHTML=`
+  <div class="vhead"><p class="eyebrow">2 / 2</p><h1 class="t">パスコードを決める</h1>
+  <p class="sub">端末を貸したときに、記録が見られないようにします。</p></div>
+  <div class="field"><label>4桁の数字</label><input id="p1" type="password" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+  <div class="field"><label>もう一度</label><input id="p2" type="password" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+  <div class="note"><b>忘れても記録は消えません。</b>3回まちがえると、1時間後にパスコードなしで開けるようになります。書き出したファイルの合言葉とは、別のものです。</div>
+  <button class="btn" id="ok">決める</button>
+  <button class="btn ghost" id="skip">あとで設定する</button>`;
+  $("#ok").onclick=async()=>{
+    const a=V.querySelector("#p1").value, b=V.querySelector("#p2").value;
+    if(!/^\d{4}$/.test(a)) return toast("4桁の数字を入れてください");
+    if(a!==b) return toast("2回の入力が違います");
+    S.settings.pass=await hashPass(a); await saveNow(); go("tasks");
+  };
+  $("#skip").onclick=()=>go("tasks");
+}
+
+/* ---------- やること ---------- */
+function viewTasks(){
+  const t=mine(S.tasks), fil=ctx.f||"soon";
+  const open=t.filter(x=>!x.done), done=t.filter(x=>x.done);
+  let list;
+  if(fil==="soon") list=open.filter(x=>!x.due || diffDays(today(),x.due)<=1).sort(byDue);
+  else if(fil==="week") list=open.filter(x=>!x.due || diffDays(today(),x.due)<=7).sort(byDue);
+  else list=done.slice().sort((a,b)=>(b.doneAt||"").localeCompare(a.doneAt||""));
+  const exams=mine(S.tasks).filter(x=>x.kind==="exam"&&!x.done).sort(byDue).slice(0,3);
+  V.innerHTML=`
+  <div class="vhead"><p class="eyebrow">${fmt(today(),true)}</p>
+  <h1 class="t">やること</h1><p class="sub">残り${open.length}件</p></div>
+  <div class="chips">
+    ${[["soon","今日・明日"],["week","今週"],["done","終わった"]].map(([k,l])=>
+      `<button class="chip${fil===k?" on":""}" data-f="${k}">${l}</button>`).join("")}
+  </div>
+  <div id="list">${list.length? list.map(taskRow).join("") :
+    `<div class="empty">${fil==="done"?"まだありません":"いまのところ、ありません"}</div>`}</div>
+  ${exams.length?`<p class="sec">近いテスト</p>${exams.map(x=>
+    `<div class="item"><div class="body"><div class="tt">${esc(x.title)}</div>
+    <div class="mm">${x.due?fmt(x.due)+"・"+relDay(x.due):"日付なし"}</div></div>
+    <button class="chip" data-goexam="${x.id}">点数を入れる</button></div>`).join("")}`:""}
+  <button class="btn" data-act="add">＋ 追加する</button>`;
+  $(".chips").onclick=async e=>{const b=e.target.closest("[data-f]"); if(b) go("tasks",{f:b.dataset.f});};
+  V.onclick=async e=>{
+    const c=e.target.closest("[data-done]");
+    if(c){ const x=S.tasks.find(t=>t.id===c.dataset.done); x.done=!x.done; x.doneAt=x.done?today():null; await saveNow(); render(); return; }
+    const d=e.target.closest("[data-del]");
+    if(d){ if(await ok("この予定を削除しますか",{danger:true,okLabel:"削除"})){ S.tasks=S.tasks.filter(t=>t.id!==d.dataset.del); await saveNow(); render(); } return; }
+    if(e.target.closest('[data-act="add"]')) go("taskadd");
+    const g=e.target.closest("[data-goexam]"); if(g) go("rec");
+  };
+}
+const byDue=(a,b)=>(a.due||"9999").localeCompare(b.due||"9999");
+function taskRow(x){
+  const over = x.due && diffDays(today(),x.due)<0 && !x.done;
+  return `<div class="item">
+    <button class="cbx ${x.done?"on":""}" data-done="${x.id}" aria-label="完了"></button>
+    <div class="body"><div class="tt ${x.done?"done":""}">${esc(x.title)}
+      ${x.due&&diffDays(today(),x.due)===1?'<span class="tag due">明日</span>':""}
+      ${over?'<span class="tag due">期限すぎ</span>':""}</div>
+      <div class="mm">${x.subjectId?esc(subName(x.subjectId))+"・":""}${TASKKINDS[x.kind]||""}${x.due?"・"+fmt(x.due):""}</div>
+    </div>
+    <button class="chip" data-del="${x.id}">削除</button></div>`;
+}
+
+/* ---------- やることを追加 ---------- */
+function viewTaskAdd(){
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">追加する</h1></div>
+  <div class="chips" id="kd">${Object.entries(TASKKINDS).map(([k,l],i)=>
+    `<button class="chip${i?"":" on"}" data-k="${k}">${l}</button>`).join("")}</div>
+  <div class="field"><label>内容</label><input id="ti" type="text" placeholder="数学ワーク p.42-43"></div>
+  <div class="field"><label>期限</label>
+    <div class="chips" id="dq">
+      <button class="chip" data-d="0">今日</button>
+      <button class="chip on" data-d="1">明日</button>
+      <button class="chip" data-d="7">1週間後</button>
+    </div>
+    <input id="dt" type="date" value="${addDays(today(),1)}" style="margin-top:8px">
+  </div>
+  ${subjectPicker()}
+  <div class="field"><label>メモ（任意）</label><textarea id="mo" placeholder="未入力"></textarea></div>
+  <button class="btn" id="ok">追加する</button>
+  <button class="btn ghost" id="cc">やめる</button>`;
+  let kind="hw";
+  $("#kd").onclick=async e=>{const b=e.target.closest("[data-k]"); if(!b)return;
+    V.querySelectorAll("#kd .chip").forEach(c=>c.classList.remove("on")); b.classList.add("on"); kind=b.dataset.k;};
+  $("#dq").onclick=async e=>{const b=e.target.closest("[data-d]"); if(!b)return;
+    V.querySelectorAll("#dq .chip").forEach(c=>c.classList.remove("on")); b.classList.add("on");
+    V.querySelector("#dt").value=addDays(today(),+b.dataset.d);};
+  bindSubjects();
+  $("#ok").onclick=async ()=>{
+    const title=V.querySelector("#ti").value.trim();
+    if(!title) return toast("内容を入れてください");
+    S.tasks.push({id:uid(),studentId:S.activeId,title,kind,subjectId:pickedSubject,
+      due:V.querySelector("#dt").value||null,memo:V.querySelector("#mo").value.trim(),done:false,doneAt:null});
+    await saveNow(); go("tasks");
+  };
+  $("#cc").onclick=()=>go("tasks");
+}
+
+/* 教科ピッカー（既定は空。その場で追加できる） */
+let pickedSubject=null;
+function subjectPicker(sel){
+  pickedSubject=sel??null;
+  return `<div class="field"><label>教科</label>
+    <div class="chips" id="sb">${S.subjects.map(s=>
+      `<button class="chip${s.id===pickedSubject?" on":""}" data-s="${s.id}">${esc(s.name)}</button>`).join("")}
+      <button class="chip add" data-s="new">＋ 教科を追加</button></div>
+    ${S.subjects.length?"":'<p class="hint">最初は空です。使う教科だけ追加してください</p>'}</div>`;
+}
+function bindSubjects(){
+  const el=V.querySelector("#sb"); if(!el) return;
+  el.onclick=async e=>{
+    const b=e.target.closest("[data-s]"); if(!b) return;
+    if(b.dataset.s==="new"){
+      const n=await ask("教科を追加",null,{ph:"数学 / 英語 / 物理基礎 など"}); if(!n||!n.trim()) return;
+      const s={id:uid(),name:n.trim()}; S.subjects.push(s); save();
+      pickedSubject=s.id;
+      b.insertAdjacentHTML("beforebegin",`<button class="chip on" data-s="${s.id}">${esc(s.name)}</button>`);
+      el.querySelectorAll(".chip").forEach(c=>{ if(c.dataset.s!==s.id) c.classList.remove("on"); });
+      return;
+    }
+    el.querySelectorAll(".chip").forEach(c=>c.classList.remove("on"));
+    b.classList.add("on"); pickedSubject=b.dataset.s;
+  };
+}
+
+/* ---------- 点数を記録 ---------- */
+function viewRec(){
+  const tests=mine(S.tests).filter(t=>!t.archived)
+    .sort((a,b)=>(lastDate(b.id)||"").localeCompare(lastDate(a.id)||""));
+  if(!tests.length){
+    V.innerHTML=`<div class="vhead"><h1 class="t">点数を記録</h1>
+      <p class="sub">まずテストを作ります。満点はここで一度だけ決めます。</p></div>
+      <div class="empty">まだテストがありません</div>
+      <button class="btn" id="new">＋ テストを作る</button>
+      ${manageLink()}`;
+    $("#new").onclick=()=>go("recnew");
+    bindManage(); return;
+  }
+  const cur=S.tests.find(t=>t.id===ctx.t)||tests[0];
+  const a=analyze([cur]);
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">点数を記録</h1></div>
+  <div class="chips" id="tt">${tests.map(t=>
+    `<button class="chip${t.id===cur.id?" on":""}" data-t="${t.id}">${esc(shortName(t))}・${t.max}点</button>`).join("")}
+    <button class="chip add" data-t="new">＋ 作る</button></div>
+  <div style="text-align:center;padding:22px 0 6px">
+    <input id="sc" type="number" inputmode="numeric" min="0" max="${cur.max}" placeholder="0"
+      style="width:150px;text-align:center;font-size:54px;font-weight:800;border:0;border-bottom:2px solid var(--ink);background:transparent;padding:0 0 4px">
+    <div class="hint" style="margin-top:12px">／ ${cur.max}点（このテストの満点）</div>
+  </div>
+  <div class="field"><label>実施日</label>
+    <div class="chips" id="dq">
+      <button class="chip on" data-d="0">今日</button>
+      <button class="chip" data-d="-1">昨日</button>
+      <button class="chip" data-d="-7">1週間前</button>
+    </div>
+    <input id="dt" type="date" value="${today()}" max="${today()}" style="margin-top:8px">
+    <p class="hint" id="dh"></p>
+  </div>
+  <div class="field"><label>範囲・単元（任意）</label><input id="rg" type="text" placeholder="未入力"></div>
+  ${a&&a.enough&&a.goal!==null?`<div class="note">いまの目標は <b>${a.goal}点</b>（${esc(a.goalNote)}）</div>`:""}
+  <button class="btn" id="ok">記録する</button>
+  ${manageLink()}`;
+  $("#tt").onclick=async e=>{
+    const b=e.target.closest("[data-t]"); if(!b) return;
+    if(b.dataset.t==="new") return go("recnew");
+    go("rec",{t:b.dataset.t});
+  };
+  const dt=V.querySelector("#dt"), dh=V.querySelector("#dh");
+  const showRel=()=>{ const d=diffDays(today(),dt.value);
+    dh.textContent = d===0? "" : `${-d}日前の記録として保存されます`; };
+  $("#dq").onclick=async e=>{const b=e.target.closest("[data-d]"); if(!b)return;
+    V.querySelectorAll("#dq .chip").forEach(c=>c.classList.remove("on")); b.classList.add("on");
+    dt.value=addDays(today(),+b.dataset.d); showRel();};
+  dt.onchange=showRel;
+  $("#ok").onclick=async ()=>{
+    const v=V.querySelector("#sc").value;
+    if(v==="") return toast("点数を入れてください");
+    const score=Math.round(+v);
+    if(isNaN(score)||score<0||score>cur.max) return toast(`0〜${cur.max}の範囲で入れてください`);
+    const before=analyze([cur]);
+    const rec={id:uid(),studentId:S.activeId,testId:cur.id,score,date:dt.value,
+      note:V.querySelector("#rg").value.trim(),enteredAt:today()};
+    S.records.push(rec); await saveNow(); go("recdone",{t:cur.id,r:rec.id,prevBest:before?before.best:null,prev3:before?before.recent3:null,prevN:before?before.n:0});
+  };
+  bindManage();
+}
+const shortName=t=>t.name.length>7? t.name.slice(0,6)+"…" : t.name;
+function lastDate(testId){
+  const r=mine(S.records).filter(x=>x.testId===testId).map(x=>x.date).sort();
+  return r.length? r[r.length-1] : null;
+}
+const manageLink=()=>`<button class="btn ghost" id="mg">テストの管理</button>
+  <button class="btn ghost" id="ls">記録の一覧</button>`;
+function bindManage(){
+  const a=V.querySelector("#mg"), b=V.querySelector("#ls");
+  if(a) a.onclick=()=>go("recmanage");
+  if(b) b.onclick=()=>go("reclist");
+}
+
+/* ---------- テストを作る ---------- */
+function viewTestNew(){
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">テストを作る</h1>
+  <p class="sub">最初の一回だけ。次からは点数を入れるだけです。</p></div>
+  <div class="field"><label>テスト名</label><input id="nm" type="text" placeholder="英単語テスト"></div>
+  ${subjectPicker()}
+  <div class="field"><label>種類</label>
+    <div class="chips" id="kd">${Object.entries(KINDS).map(([k,l],i)=>
+      `<button class="chip${i?"":" on"}" data-k="${k}">${l}</button>`).join("")}</div></div>
+  <div class="field" style="border-bottom:2px solid var(--ink)"><label>満点</label>
+    <input id="mx" type="number" inputmode="numeric" value="100" min="1" max="1000" style="font-size:30px;font-weight:700">
+    <div class="chips" id="mq">${[10,20,50,100,500].map(n=>`<button class="chip" data-m="${n}">${n}</button>`).join("")}</div>
+  </div>
+  <div id="dup"></div>
+  <div class="note"><b>満点は後から変えられません。</b>満点が違うテストは、同じ名前でも別のテストとして記録されます。</div>
+  <button class="btn" id="ok">このテストを作る</button>
+  <button class="btn ghost" id="cc">やめる</button>`;
+  let kind="small";
+  bindSubjects();
+  $("#kd").onclick=async e=>{const b=e.target.closest("[data-k]"); if(!b)return;
+    V.querySelectorAll("#kd .chip").forEach(c=>c.classList.remove("on")); b.classList.add("on"); kind=b.dataset.k;};
+  $("#mq").onclick=async e=>{const b=e.target.closest("[data-m]"); if(!b)return;
+    V.querySelector("#mx").value=b.dataset.m; checkDup();};
+  const nm=V.querySelector("#nm");
+  nm.oninput=checkDup;
+  V.querySelector("#mx").oninput=checkDup;
+  function checkDup(){
+    const name=nm.value.trim(), max=+V.querySelector("#mx").value;
+    const same=mine(S.tests).filter(t=>t.name===name);
+    const box=V.querySelector("#dup");
+    if(!name||!same.length){ box.innerHTML=""; return; }
+    const exact=same.find(t=>t.max===max);
+    box.innerHTML = exact
+      ? `<div class="warn"><b>まったく同じテストがあります。</b>${esc(name)}・${max}点（記録${mine(S.records).filter(r=>r.testId===exact.id).length}件）<br>新しく作らず、そのまま記録できます。</div>`
+      : `<div class="info"><b>同じ名前のテストがあります。</b><br>${same.map(t=>`${esc(t.name)}・${t.max}点（記録${mine(S.records).filter(r=>r.testId===t.id).length}件）`).join("<br>")}<br>満点が違うので、<b>別のテスト</b>として作られます。これまでの記録はそのまま残ります。</div>`;
+  }
+  $("#ok").onclick=async ()=>{
+    const name=nm.value.trim(), max=Math.round(+V.querySelector("#mx").value);
+    if(!name) return toast("テスト名を入れてください");
+    if(!(max>0&&max<=1000)) return toast("満点は1〜1000で入れてください");
+    if(mine(S.tests).some(t=>t.name===name&&t.max===max)) return toast("同じ名前・同じ満点のテストがすでにあります");
+    const t={id:uid(),studentId:S.activeId,name,subjectId:pickedSubject,kind,max,archived:false};
+    S.tests.push(t); await saveNow(); go("rec",{t:t.id});
+  };
+  $("#cc").onclick=()=>go("rec");
+}
+
+/* ---------- 記録した直後 ---------- */
+function viewRecDone(){
+  const t=S.tests.find(x=>x.id===ctx.t), r=S.records.find(x=>x.id===ctx.r);
+  const a=analyze([t]);
+  const isBest = ctx.prevBest===null || r.score>ctx.prevBest;
+  const enough = ctx.prevN>=MIN_N-1;
+  const streak=(()=>{
+    if(!a) return 0;
+    const rs=a.records.slice().reverse(); let c=0;
+    for(const x of rs){ if(x.score>=a.avgRate/100*t.max) c++; else break; }
+    return c;
+  })();
+  V.innerHTML=`
+  <div style="text-align:center;padding:18px 0 4px">
+    ${isBest&&ctx.prevBest!==null?'<p class="eyebrow" style="color:var(--red);letter-spacing:.2em">自己ベスト更新</p>':
+      isBest?'<p class="eyebrow">はじめての記録</p>':'<p class="eyebrow">記録しました</p>'}
+    <div style="margin-top:14px">${scoreMark(r.score,ctx.prevBest,"big")}</div>
+    <div class="hint" style="margin-top:18px">／ ${t.max}点・${esc(t.name)}</div>
+  </div>
+  <p class="sec">これまでと比べて</p>
+  <div class="card">
+    <div class="stat"><span>これまでの自己ベスト</span><b>${ctx.prevBest===null?"—":ctx.prevBest+"点"}</b></div>
+    <div class="stat"><span>直近3回の平均</span><b>${ctx.prev3===null?"—":ctx.prev3.toFixed(1)+"点"}</b></div>
+    <div class="stat"><span>記録した回数</span><b>${a.n}回</b></div>
+    ${streak>1?`<div class="stat"><span>平均を超えた回数</span><b>${streak}回連続</b></div>`:""}
+  </div>
+  ${a.enough&&a.goal!==null?`
+  <div class="card ink">
+    <p class="eyebrow" style="margin:0">次の目標</p>
+    <div style="display:flex;align-items:baseline;gap:10px;margin-top:2px">
+      <span class="goalv">${a.goal}点</span>
+      <span style="font-size:12.5px;color:var(--ink-soft)">${esc(a.goalNote)}</span>
+    </div>
+    <div class="chips"><button class="chip on">この目標にする</button><button class="chip" id="own">自分で決める</button></div>
+  </div>`:`<div class="note">記録が${MIN_N}回になると、次の目標が出せるようになります。あと${Math.max(0,MIN_N-a.n)}回。</div>`}
+  <button class="btn ghost" id="cl">閉じる</button>`;
+  const own=V.querySelector("#own");
+  if(own) own.onclick=async ()=>{
+    const v=await ask("目標にする点数",String(a.goal),{mode:"numeric"});
+    if(v===null) return;
+    const n=Math.round(+v);
+    if(isNaN(n)||n<0||n>t.max) return toast(`0〜${t.max}で入れてください`);
+    S.settings.goals[t.id]=n; save(); toast(`目標を${n}点にしました`);
+  };
+  $("#cl").onclick=()=>go("rec",{t:t.id});
+}
+
+/* ---------- テストの管理 ---------- */
+function viewManage(){
+  const map=groupsFor(S.activeId);
+  const bySub=new Map();
+  for(const [k,list] of map){
+    const sid=list[0].subjectId||"-";
+    if(!bySub.has(sid)) bySub.set(sid,[]);
+    bySub.get(sid).push([k,list]);
+  }
+  let html=`<div class="vhead"><h1 class="t">テストの管理</h1>
+    <p class="sub">満点ごとに分かれています。</p></div>`;
+  if(!map.size) html+=`<div class="empty">まだテストがありません</div>`;
+  for(const [sid,groups] of bySub){
+    html+=`<p class="sec">${sid==="-"?"教科なし":esc(subName(sid))}</p>`;
+    for(const [k,list] of groups){
+      const sorted=list.slice().sort((a,b)=>a.max-b.max);
+      html+=sorted.map(t=>{
+        const n=mine(S.records).filter(r=>r.testId===t.id).length;
+        const ld=lastDate(t.id);
+        return `<div class="item"${t.archived?' style="opacity:.5"':""}>
+          <div class="body"><div class="tt">${esc(t.name)}<span class="tag max">${t.max}点</span>
+          ${t.archived?'<span class="tag mute">しまってある</span>':""}</div>
+          <div class="mm">記録${n}件${ld?"・最終 "+fmt(ld):""}</div></div>
+          <button class="chip" data-arc="${t.id}">${t.archived?"戻す":"しまう"}</button></div>`;
+      }).join("");
+      if(sorted.length>1){
+        const on=!!S.settings.grouped[k];
+        html+=`<div class="note"><b>この${sorted.length}つをまとめて見ますか。</b>満点が違っても、得点率でつなげば1本の推移として見られます。記録はそのまま、見え方だけが変わります。
+          <div class="chips"><button class="chip${on?" on":""}" data-grp="${k}" data-v="1">まとめて見る</button>
+          <button class="chip${on?"":" on"}" data-grp="${k}" data-v="0">別々のまま</button></div></div>`;
+      }
+    }
+  }
+  html+=`<button class="btn ghost" id="bk">戻る</button>`;
+  V.innerHTML=html;
+  V.onclick=async e=>{
+    const a=e.target.closest("[data-arc]");
+    if(a){ const t=S.tests.find(x=>x.id===a.dataset.arc); t.archived=!t.archived; await saveNow(); render(); return; }
+    const g=e.target.closest("[data-grp]");
+    if(g){ S.settings.grouped[g.dataset.grp]= g.dataset.v==="1"; await saveNow(); render(); return; }
+    if(e.target.closest("#bk")) go("rec");
+  };
+}
+
+/* ---------- 記録の一覧 ---------- */
+function viewList(){
+  const rs=mine(S.records).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const sub=ctx.s||"all";
+  const filtered=rs.filter(r=>{
+    if(sub==="all") return true;
+    const t=S.tests.find(x=>x.id===r.testId);
+    return t && t.subjectId===sub;
+  });
+  const months=[...new Set(filtered.map(r=>r.date.slice(0,7)))];
+  const bestOf={};
+  mine(S.records).forEach(r=>{ bestOf[r.testId]=Math.max(bestOf[r.testId]??-1, r.score); });
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">記録</h1></div>
+  <div class="chips" id="sf">
+    <button class="chip${sub==="all"?" on":""}" data-s="all">全部</button>
+    ${S.subjects.map(s=>`<button class="chip${sub===s.id?" on":""}" data-s="${s.id}">${esc(s.name)}</button>`).join("")}
+  </div>
+  ${filtered.length? months.map(m=>{
+    const [y,mo]=m.split("-");
+    return `<p class="sec">${y}年 ${+mo}月</p>` + filtered.filter(r=>r.date.startsWith(m)).map(r=>{
+      const t=S.tests.find(x=>x.id===r.testId)||{name:"?",max:100};
+      const rate=Math.round(r.score/t.max*100);
+      const best=bestOf[r.testId]??null;
+      return `<div class="item"><div class="body">
+        <div class="tt">${esc(t.name)}<span class="tag max">${t.max}点</span></div>
+        <div class="bar"><i class="${rate<65?"low":""}" style="width:${rate}%"></i></div>
+        <div class="mm">${fmt(r.date)}・${r.score} / ${t.max}（${rate}%）${r.note?"・"+esc(r.note):""}</div>
+      </div>${scoreMark(r.score,best,"sm")}
+      <button class="chip" data-del="${r.id}">削除</button></div>`;
+    }).join("");
+  }).join("") : `<div class="empty">まだ記録がありません</div>`}
+  <div class="note">バーは得点率です。満点の違うテストを並べて見るためのものです。</div>
+  <button class="btn ghost" id="bk">戻る</button>`;
+  $("#sf").onclick=async e=>{const b=e.target.closest("[data-s]"); if(b) go("reclist",{s:b.dataset.s});};
+  V.onclick=async e=>{
+    const d=e.target.closest("[data-del]");
+    if(d){ if(await ok("この記録を削除しますか",{danger:true,okLabel:"削除"})){ S.records=S.records.filter(r=>r.id!==d.dataset.del); await saveNow(); render(); } return; }
+    if(e.target.closest("#bk")) go("rec");
+  };
+}
+
+/* ---------- 分析 ---------- */
+function viewAna(){
+  const tests=mine(S.tests).filter(t=>!t.archived);
+  if(!tests.length){
+    V.innerHTML=`<div class="vhead"><h1 class="t">分析</h1></div>
+      <div class="empty">まだ記録がありません</div>`; return;
+  }
+  const cur=S.tests.find(t=>t.id===ctx.t)||tests[0];
+  const group=testsForAnalysis(cur);
+  const a=analyze(group);
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">分析</h1><p class="sub">比べる相手は、いつも過去の自分です。</p></div>
+  <div class="chips" id="tt">${tests.map(t=>
+    `<button class="chip${t.id===cur.id?" on":""}" data-t="${t.id}">${esc(shortName(t))}・${t.max}点</button>`).join("")}</div>
+  ${!a? `<div class="empty">このテストの記録はまだありません</div>` : `
+  ${group.length>1?`<div class="note">${group.length}つのテストを<b>まとめて</b>見ています（得点率でつないでいます）。</div>`:""}
+  <p class="sec">得点率の推移</p>
+  ${chart(a,group)}
+  <p class="sec">${esc(cur.name)}${group.length>1?"（まとめ）":"・"+cur.max+"点"}</p>
+  <div class="card">
+    <div class="stat"><span>記録した回数</span><b>${a.n}回</b></div>
+    <div class="stat"><span>平均</span><b>${a.sameMax? a.avgScore.toFixed(1)+"点" : Math.round(a.avgRate)+"%"}</b></div>
+    <div class="stat"><span>まん中の値</span><b>${Math.round(a.medRate)}%</b></div>
+    <div class="stat"><span>自己ベスト</span><b>${a.sameMax? a.best+"点" : Math.round(a.bestRate)+"%"}</b></div>
+    <div class="stat"><span>直近3回の平均</span><b>${a.sameMax? a.recent3.toFixed(1)+"点" : Math.round(a.recent3Rate)+"%"}</b></div>
+    ${a.enough?`<div class="stat"><span>ここ最近の傾向</span><b>${a.trend}</b></div>`:""}
+  </div>
+  ${a.enough&&a.goal!==null?`
+  <div class="card ink">
+    <p class="eyebrow" style="margin:0">次の目標</p>
+    <div style="display:flex;align-items:baseline;gap:10px;margin-top:2px">
+      <span class="goalv">${S.settings.goals[cur.id]??a.goal}点</span>${a.goalMax!==cur.max?`<span style="font-size:11px;color:var(--ink-faint)">／${a.goalMax}点満点</span>`:""}
+      <span style="font-size:12.5px;color:var(--ink-soft)">${S.settings.goals[cur.id]?"自分で決めた目標":esc(a.goalNote)}</span>
+    </div>
+    <div class="chips"><button class="chip" id="own">目標を決め直す</button></div>
+  </div>`:`<div class="note">記録が${MIN_N}回になると、傾向と目標が出せるようになります。いまは${a.n}回。<br><b>少ない記録で線を引くと、実際より大きく見えてしまいます。</b></div>`}
+  ${a.max<=20?`<div class="note"><b>${a.max}点満点は1問で${Math.round(100/a.max)}%動きます。</b>満点の大きいテストと同じようには比べられません。</div>`:""}
+  `}
+  <div class="note">このアプリは偏差値を出しません。比べる相手がいないためです。点数の予測もしません。</div>`;
+  $("#tt").onclick=async e=>{const b=e.target.closest("[data-t]"); if(b) go("ana",{t:b.dataset.t});};
+  const own=V.querySelector("#own");
+  if(own) own.onclick=async ()=>{
+    const v=await ask("目標にする点数",String(S.settings.goals[cur.id]??a.goal),{mode:"numeric"});
+    if(v===null) return;
+    const n=Math.round(+v);
+    if(isNaN(n)||n<0||n>cur.max) return toast(`0〜${cur.max}で入れてください`);
+    S.settings.goals[cur.id]=n; await saveNow(); render();
+  };
+}
+function chart(a,group){
+  const W=300,H=110,P=6;
+  const pts=a.rates.map((v,i)=>{
+    const x=a.rates.length===1? W/2 : P+i*(W-P*2)/(a.rates.length-1);
+    return [x, H-8-(v/100)*(H-22)];
+  });
+  const line=pts.map(p=>p.map(n=>n.toFixed(1)).join(",")).join(" ");
+  // 満点が変わった位置
+  let marks="";
+  if(group.length>1){
+    let prev=null;
+    a.records.forEach((r,i)=>{
+      const m=(S.tests.find(t=>t.id===r.testId)||{}).max;
+      if(prev!==null&&m!==prev){ const x=pts[i][0];
+        marks+=`<line x1="${x.toFixed(1)}" y1="4" x2="${x.toFixed(1)}" y2="${H-8}" stroke="#B8860B" stroke-dasharray="2 3"/>`; }
+      prev=m;
+    });
+  }
+  // 目標の帯（予測ではなく目安。記録が増えるほど狭くなる）
+  let band="";
+  if(a.enough&&a.goal!==null){
+    const gy=H-8-(a.goal/a.max*100/100)*(H-22);
+    const w=Math.max(4,20-a.n);
+    band=`<rect x="${W-14}" y="${(gy-w).toFixed(1)}" width="14" height="${(w*2).toFixed(1)}" fill="#2A5D8A" opacity=".13"/>
+      <line x1="${W-14}" y1="${gy.toFixed(1)}" x2="${W}" y2="${gy.toFixed(1)}" stroke="#2A5D8A" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:120px" role="img" aria-label="得点率の推移">
+    <line x1="0" y1="${H-8}" x2="${W}" y2="${H-8}" stroke="#E4E1D8"/>
+    <line x1="0" y1="${(H-8-(H-22)/2).toFixed(1)}" x2="${W}" y2="${(H-8-(H-22)/2).toFixed(1)}" stroke="#EFECE4" stroke-dasharray="3 3"/>
+    ${marks}${band}
+    <polyline points="${line}" fill="none" stroke="#2A5D8A" stroke-width="2.2" stroke-linejoin="round"/>
+    ${pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="#2A5D8A"/>`).join("")}
+  </svg>
+  <div class="hint" style="display:flex;justify-content:space-between">
+    <span>${fmt(a.records[0].date)}</span>
+    <span>0〜100%${a.enough&&a.goal!==null?"　右の帯は目標の目安（予測ではありません）":""}</span>
+    <span>${fmt(a.records[a.records.length-1].date)}</span></div>`;
+}
+
+/* ---------- 面談シート ---------- */
+function earliestDate(){
+  const ds=[...mine(S.records).map(r=>r.date), ...mine(S.tasks).map(t=>t.due).filter(Boolean)]
+    .filter(Boolean).sort();
+  return ds[0] || addDays(today(),-30);
+}
+function viewSheet(){
+  // 学期の区切りは学校ごとに違うため、期間は日付で指定する。既定は過去1か月。
+  const sel = ("sel" in ctx)? ctx.sel : 30;
+  let to   = ctx.to || today();
+  let from = ctx.from || (sel===0? earliestDate() : addDays(to,-sel));
+  if(from>to){ const w=from; from=to; to=w; }
+  const days=diffDays(from,to);
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">面談シートを作る</h1>
+  <p class="sub">期間を決めて、その間の記録をまとめます。</p></div>
+  <div class="chips" id="pf">
+    ${[[30,"過去1か月"],[90,"過去3か月"],[180,"過去半年"],[0,"すべて"]].map(([d,l])=>
+      `<button class="chip${sel===d?" on":""}" data-d="${d}">${l}</button>`).join("")}</div>
+  <div class="row2">
+    <div class="field" style="flex:1"><label>はじめ</label><input id="f1" type="date" value="${from}" max="${today()}"></div>
+    <div class="field" style="flex:1"><label>おわり</label><input id="f2" type="date" value="${to}" max="${today()}"></div>
+  </div>
+  <p class="hint">${fmt(from,true)} 〜 ${fmt(to,true)}（${days+1}日間）</p>
+  <div id="sheetpreview">${sheetHTML(from,to)}</div>
+  <div class="note"><b>目標は載せません。</b>目標は自分が次に向かうための数字であって、人が評価に使う数字ではないからです。</div>
+  <button class="btn red" id="pr">PDFとして保存・印刷</button>
+  <p class="hint" style="text-align:center;margin-top:8px">印刷画面から「PDFとして保存」を選べます</p>
+  <button class="btn ghost" id="bk">戻る</button>`;
+  $("#pf").onclick=async e=>{
+    const b=e.target.closest("[data-d]"); if(!b) return;
+    go("sheet",{sel:+b.dataset.d});
+  };
+  const f1=V.querySelector("#f1"), f2=V.querySelector("#f2");
+  const onDate=()=>go("sheet",{sel:null, from:f1.value||from, to:f2.value||to});
+  f1.onchange=onDate; f2.onchange=onDate;
+  $("#pr").onclick=async ()=>{
+    document.getElementById("printarea").innerHTML=sheetHTML(from,to);
+    window.print();
+  };
+  $("#bk").onclick=()=>go("set");
+}
+function sheetHTML(from,to){
+  const st=me();
+  const rows=mine(S.tests).map(t=>{
+    const rs=mine(S.records).filter(r=>r.testId===t.id&&r.date>=from&&r.date<=to)
+      .sort((a,b)=>a.date.localeCompare(b.date));
+    if(!rs.length) return null;
+    const sc=rs.map(r=>r.score);
+    return {t,n:rs.length,avg:Math.round(mean(sc)/t.max*100),last3:sc.slice(-3).join(" / ")};
+  }).filter(Boolean);
+  const small=rows.filter(r=>r.t.kind!=="term"), term=rows.filter(r=>r.t.kind==="term");
+  const tasks=mine(S.tasks).filter(x=>x.due&&x.due>=from&&x.due<=to&&x.kind!=="exam");
+  const late=tasks.filter(x=>!x.done||(x.doneAt&&x.doneAt>x.due)).length;
+  const unrec=mine(S.tasks).filter(x=>x.kind==="exam"&&x.due&&x.due>=from&&x.due<=to&&!x.done).length;
+  const row=r=>`<tr><td>${esc(r.t.name)}</td><td class="num">${r.t.max}</td><td class="num">${r.n}</td>
+    <td class="num">${r.n>=3? r.avg+"%" : "—"}</td><td class="num">${r.n>=3? esc(r.last3) : "記録が少ないため省略"}</td></tr>`;
+  return `
+  <p class="sheet-h">学習記録シート</p>
+  <p class="sheet-m">${esc(st.name)}／${esc(st.grade)}　${from.replace(/-/g,".")} – ${to.replace(/-/g,".")}　作成 ${to.replace(/-/g,".")}</p>
+  <table class="sh"><thead><tr><th>テスト</th><th style="text-align:right">満点</th><th style="text-align:right">回数</th>
+    <th style="text-align:right">平均</th><th style="text-align:right">直近3回</th></tr></thead>
+    <tbody>${small.length? small.map(row).join("") : `<tr><td colspan="5">記録なし</td></tr>`}</tbody></table>
+  ${term.length?`<p class="sheet-m" style="margin-top:8px">定期テスト</p>
+    <table class="sh"><tbody>${term.map(r=>
+      `<tr><td>${esc(r.t.name)}</td><td class="num">${r.t.max}点満点</td><td class="num">${r.n}回</td><td class="num">${r.avg}%</td></tr>`).join("")}</tbody></table>`:""}
+  <p class="sheet-m" style="margin-top:8px">提出のようす：${tasks.length}件中 期限すぎ ${late}件${unrec?`／点数が未記録のテスト ${unrec}件`:""}</p>
+  <p class="sheet-m" style="margin-bottom:2px">聞いてみたいこと</p>
+  <div class="freebox"></div>`;
+}
+
+/* ---------- 設定 ---------- */
+function viewSet(){
+  const last=S.settings.lastExport;
+  const days=last? diffDays(last,today()) : null;
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">設定</h1></div>
+  <p class="sec">使う人</p>
+  <div class="chips" id="stu">${S.students.map(s=>
+    `<button class="chip${s.id===S.activeId?" on":""}" data-u="${s.id}">${esc(s.name)}（${esc(s.grade)}）</button>`).join("")}
+    <button class="chip add" data-u="new">＋ 追加</button></div>
+  <div class="rowsplit"><div><div class="k">${esc(me().name)}の記録を消す</div>
+    <div class="d">テスト${mine(S.tests).length}件・記録${mine(S.records).length}件・やること${mine(S.tasks).length}件</div></div>
+    <button class="chip" id="dels">削除</button></div>
+  <p class="sec">まとめる</p>
+  <div class="rowsplit"><div><div class="k">面談シートを作る</div><div class="d">A4・1枚のPDF</div></div>
+    <button class="chip" id="sh">開く</button></div>
+  <p class="sec">守る</p>
+  <div class="rowsplit"><div><div class="k">開くときにパスコード</div>
+    <div class="d">${S.settings.pass?"設定ずみ":"未設定"}</div></div>
+    <button class="sw ${S.settings.pass?"on":""}" id="pw"></button></div>
+  <div class="rowsplit"><div><div class="k">離れたら自動で閉じる</div><div class="d">${S.settings.autoLock}分</div></div>
+    <button class="chip" id="al">変える</button></div>
+  <div class="note"><b>この番号は、記録を暗号化していません。</b>人目から隠すためのものです。<br>
+    3回まちがえると1時間後にパスコードなしで開けるので、忘れても記録が消えることはありません。</div>
+  <p class="sec">引き継ぎ</p>
+  ${last===null? `<div class="warn"><b>まだ一度も書き出していません。</b>いま端末を紛失すると、記録は戻せません。</div>`
+    : days>=14? `<div class="warn"><b>前回の書き出しから${days}日たっています。</b>いま端末を紛失すると、${days}日分の記録は戻せません。</div>`
+    : `<div class="note">前回の書き出し：${fmt(last,true)}</div>`}
+  <div class="rowsplit"><div><div class="k">書き出し・読み込み</div><div class="d">機種変更のときはこちら</div></div>
+    <button class="chip" id="tr">開く</button></div>
+  <p class="sec">通信について</p>
+  <div class="note"><b>記録は送信しません。</b>アプリの画面を読み込むとき以外、通信しません。一度開けば、機内モードでもすべての機能が動きます。利用状況の送信、広告、外部への解析は組み込まれていません。${Store.persistent()?"":"<br><br><b>注意：</b>この環境では保存領域が使えないため、閉じると記録が消えます。ファイルを保存して開き直してください。"}</div>
+  <div class="rowsplit" style="border:0"><div><div class="k" style="color:var(--red)">すべての記録を消す</div><div class="d">取り消せません</div></div>
+    <button class="chip" id="dl">消す</button></div>
+  <p class="hint" style="text-align:center;margin-top:22px">記録 ${S.records.length}件／テスト ${S.tests.length}件／やること ${S.tasks.length}件<br>データ形式 v${S.v}</p>`;
+  $("#dels").onclick=async ()=>{
+    const st=me();
+    if(!await ok(`${st.name}さんのテスト・記録・やることを、すべて消します。\n取り消せません。`,{title:"記録を消す",danger:true,okLabel:"消す"})) return;
+    if(await ask(`確認`,null,{note:`消す場合は「${st.name}」と入力してください`})!==st.name) return;
+    mine(S.tests).forEach(t=>{ delete S.settings.goals[t.id]; });
+    S.tests  =S.tests.filter(t=>t.studentId!==st.id);
+    S.records=S.records.filter(r=>r.studentId!==st.id);
+    S.tasks  =S.tasks.filter(t=>t.studentId!==st.id);
+    S.students=S.students.filter(x=>x.id!==st.id);
+    S.activeId=S.students.length? S.students[0].id : null;
+    await saveNow(); go(S.students.length? "set" : "tasks");
+  };
+  $("#stu").onclick=async e=>{
+    const b=e.target.closest("[data-u]"); if(!b) return;
+    if(b.dataset.u==="new"){
+      const n=await ask("名前",null,{ph:"ゆうた"}); if(!n||!n.trim()) return;
+      const g=await ask("学年","中1",{ph:"中1〜高3"})||"中1";
+      const id=uid(); S.students.push({id,name:n.trim(),grade:g,school:""}); S.activeId=id; await saveNow(); render(); return;
+    }
+    S.activeId=b.dataset.u; await saveNow(); render();
+  };
+  $("#sh").onclick=()=>go("sheet");
+  $("#tr").onclick=()=>go("transfer");
+  $("#al").onclick=async ()=>{
+    const v=await ask("何分で自動的に閉じますか",String(S.settings.autoLock),{mode:"numeric",note:"1〜30分"});
+    if(v===null) return; const n=Math.round(+v);
+    if(!(n>=1&&n<=30)) return toast("1〜30で入れてください");
+    S.settings.autoLock=n; await saveNow(); render();
+  };
+  $("#pw").onclick=async()=>{
+    if(S.settings.pass){ if(await ok("パスコードをやめますか",{okLabel:"やめる"})){ S.settings.pass=null; await saveNow(); render(); } return; }
+    const a=await ask("パスコードを決める",null,{type:"password",mode:"numeric",max:4,ph:"4桁の数字"});
+    if(a===null) return;
+    if(!/^\d{4}$/.test(a)) return toast("4桁の数字を入れてください");
+    const b=await ask("もう一度",null,{type:"password",mode:"numeric",max:4,ph:"4桁の数字"});
+    if(a!==b) return toast("2回の入力が違います");
+    S.settings.pass=await hashPass(a); await saveNow(); render();
+  };
+  $("#dl").onclick=async ()=>{
+    if(!await ok("すべての記録を消します。\n取り消せません。",{title:"すべて消す",danger:true,okLabel:"消す"})) return;
+    if(await ask('確認',null,{note:'消す場合は「消す」と入力してください'})!=="消す") return;
+    S=blank(); await saveNow(); go("tasks");
+  };
+}
+
+/* ---------- 引き継ぎ ---------- */
+function viewTransfer(){
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">引き継ぎ</h1>
+  <p class="sub">機種変更や、故障のときのために。</p></div>
+  <p class="sec">書き出す</p>
+  <div class="field"><label>合言葉（8文字以上）</label>
+    <input id="p1" type="password" placeholder="••••••••" autocomplete="new-password"></div>
+  <div class="field"><label>もう一度</label>
+    <input id="p2" type="password" placeholder="••••••••" autocomplete="new-password"></div>
+  <div class="note"><b>ファイルは合言葉で暗号化されます。</b>合言葉を忘れると、誰にも開けません。作った人にも復元できません。</div>
+  <button class="btn" id="ex">ファイルを書き出す</button>
+  <div id="exres"></div>
+  <p class="sec">読み込む</p>
+  <div class="warn">読み込むと、いまの記録はすべて置きかわります。</div>
+  <input type="file" id="fi" accept=".json,application/json" style="font-size:13px">
+  <button class="btn ghost" id="im">選んだファイルを読み込む</button>
+  <div id="imres"></div>
+  <button class="btn ghost" id="bk">戻る</button>`;
+  $("#ex").onclick=async()=>{
+    const a=V.querySelector("#p1").value, b=V.querySelector("#p2").value;
+    if(a.length<8) return toast("合言葉は8文字以上にしてください");
+    if(a!==b) return toast("2回の入力が違います");
+    const file=await encryptJSON(S,a);
+    const blob=new Blob([JSON.stringify(file)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const el=document.createElement("a");
+    el.href=url; el.download=`学習記録_${today().replace(/-/g,"")}.json`;
+    document.body.appendChild(el); el.click(); el.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    S.settings.lastExport=today(); save();
+    V.querySelector("#exres").innerHTML=
+      `<div class="card"><p class="eyebrow" style="margin:0">確認番号</p>
+       <div style="font-size:19px;font-weight:700;letter-spacing:.1em;margin-top:4px">${file.check}</div>
+       <p class="hint">読み込んだ先で同じ番号が出れば、正しく引き継げています。</p></div>`;
+  };
+  $("#im").onclick=async()=>{
+    const f=V.querySelector("#fi").files[0];
+    if(!f) return toast("ファイルを選んでください");
+    let obj;
+    try{ obj=JSON.parse(await f.text()); }catch(e){ return toast("読めないファイルです"); }
+    if(obj.f!=="study-backup") return toast("このアプリの書き出しファイルではありません");
+    const pass=await ask("合言葉",null,{type:"password",ph:"書き出したときの合言葉"});
+    if(pass===null) return;
+    let out;
+    try{ out=await decryptJSON(obj,pass); }
+    catch(e){ return toast("合言葉が違うか、ファイルがこわれています"); }
+    if(!await ok("いまの記録をすべて置きかえます。\n取り消せません。",{title:"読み込む",danger:true,okLabel:"置きかえる"})) return;
+    const backup=S;
+    try{
+      const n=out.obj;
+      if(!n||!Array.isArray(n.students)) throw new Error("bad");
+      const r=migrate(n);
+      if(r.error==="newer") throw new Error("このファイルは新しい版のアプリで作られています");
+      if(r.error) throw new Error("bad");
+      await Store.set(backup,"state_before_import");
+      S=r.state;
+      await Store.set(S);
+      V.querySelector("#imres").innerHTML=
+        `<div class="card"><p class="eyebrow" style="margin:0">確認番号</p>
+         <div style="font-size:19px;font-weight:700;letter-spacing:.1em;margin-top:4px">${out.check}</div>
+         <p class="hint">書き出したときと同じ番号なら成功です。</p></div>`;
+      setTimeout(()=>go("tasks"),1200);
+    }catch(e){ S=backup; toast("読み込みに失敗したため、元に戻しました"); }
+  };
+  $("#bk").onclick=()=>go("set");
+}
+
+/* ============================================================
+   6. ロック
+   ============================================================ */
+const LOCK=document.getElementById("lock");
+let entry="", locked=false, lockTick=null;
+const MAX_TRY=3, WAIT_MS=60*60*1000;   // 3回まちがえたら1時間後に解除できる
+
+function lock(){
+  if(!S.settings.pass||locked) return;
+  locked=true; entry="";
+  LOCK.classList.remove("hidden");
+  drawLock("");
+  clearInterval(lockTick);
+  lockTick=setInterval(()=>{ if(locked&&S.settings.lockUntil) drawLock(""); },1000);
+}
+function unlockNow(){
+  locked=false; entry="";
+  clearInterval(lockTick); lockTick=null;
+  S.settings.failCount=0; S.settings.lockUntil=null; save();
+  LOCK.classList.add("hidden"); touch();
+}
+const remain=()=> S.settings.lockUntil? Math.max(0,S.settings.lockUntil-Date.now()) : 0;
+function fmtRemain(ms){
+  const m=Math.ceil(ms/60000);
+  return m>=60? `${Math.floor(m/60)}時間${m%60}分` : `${m}分`;
+}
+function drawLock(msg){
+  const waiting = !!S.settings.lockUntil && remain()>0;
+  const openable = !!S.settings.lockUntil && remain()<=0;
+  LOCK.innerHTML=`
+  <div style="text-align:center">
+    <div class="maru sm" style="display:inline-flex">${MARU}<span class="n" style="font-size:16px">記</span></div>
+    <p style="font-size:15px;font-weight:700;margin:20px 0 2px">${openable?"パスコードなしで開けます":"パスコードを入力"}</p>
+    <p class="msg">${openable?"新しい番号は、あとから決め直せます":(msg||"&nbsp;")}</p>
+  </div>
+  ${openable? `
+    <button id="emg" style="background:#E9E6DC;color:#161A18;border-radius:11px;padding:14px 28px;font-size:14.5px;font-weight:700;margin-top:10px">パスコードなしで開く</button>
+    <p class="msg" style="margin-top:20px;max-width:280px;text-align:center;line-height:1.7">これまでの記録は、すべて残っています。</p>`
+  : `
+    <div class="dots">${[0,1,2,3].map(i=>`<span class="dot ${i<entry.length?"f":""}"></span>`).join("")}</div>
+    <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join("")}
+      <button class="blank"></button><button data-k="0">0</button><button class="small" data-k="x">消す</button></div>
+    ${waiting? `<p class="msg" style="margin-top:22px;max-width:290px;text-align:center;line-height:1.8">
+      あと <b style="color:#E9E6DC">${fmtRemain(remain())}</b> で、パスコードなしで開けるようになります。<br>思い出したら、いつでも入力できます。</p>`:""}`}`;
+  const emg=LOCK.querySelector("#emg");
+  if(emg) emg.onclick=async ()=>{
+    S.settings.pass=null;          // 忘れた番号を残すと、次に開くときまた閉じ込められる
+    unlockNow();
+    toast("パスコードを解除しました。設定から新しい番号を決められます。");
+    go("set");
+  };
+  const pad=LOCK.querySelector(".pad");
+  if(pad) pad.onclick=async e=>{
+    const b=e.target.closest("[data-k]"); if(!b) return;
+    if(b.dataset.k==="x"){ entry=entry.slice(0,-1); return drawLock(""); }
+    if(entry.length>=4) return;
+    entry+=b.dataset.k; drawLock("");
+    if(entry.length===4){
+      const h=await hashPass(entry,S.settings.pass.salt);
+      if(h.hash===S.settings.pass.hash) return unlockNow();
+      entry="";
+      S.settings.failCount=(S.settings.failCount||0)+1;
+      if(S.settings.failCount>=MAX_TRY && !S.settings.lockUntil){
+        S.settings.lockUntil=Date.now()+WAIT_MS; S.settings.failCount=0; save();
+        drawLock("3回まちがえました");
+      }else{ save(); drawLock(`番号が違います（あと${MAX_TRY-S.settings.failCount}回）`); }
+    }
+  };
+}
+function touch(){ lastActive=Date.now(); }
+["click","keydown","touchstart","input"].forEach(ev=>
+  document.addEventListener(ev,touch,{passive:true}));
+setInterval(()=>{
+  if(!S||!S.settings.pass||locked) return;
+  if(Date.now()-lastActive > S.settings.autoLock*60000) lock();
+},5000);
+document.addEventListener("visibilitychange",()=>{
+  if(!S||!S.settings) return;
+  if(document.hidden) lastActive=Date.now()-S.settings.autoLock*60000+3000;
+});
+
+/* ============================================================
+   7. 起動
+   ============================================================ */
+function standalone(){
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
+}
+function installHint(){
+  const box=document.getElementById("install");
+  if(standalone() || location.protocol==="file:" || sessionStorage===undefined) return;
+  let hidden=false;
+  try{ hidden = document.cookie.indexOf("nohint=1")>=0; }catch(e){}
+  if(hidden) return;
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+  box.innerHTML=`<div style="flex:1">${ios
+    ? '<b>ホーム画面に追加できます。</b>下の共有ボタン → 「ホーム画面に追加」。アプリと同じように開けて、記録も安全に残ります。'
+    : '<b>ホーム画面に追加できます。</b>メニュー →「アプリをインストール」または「ホーム画面に追加」。アプリと同じように開けます。'}</div>
+    <button id="hintx" aria-label="閉じる">閉じる</button>`;
+  box.classList.remove("hidden");
+  box.querySelector("#hintx").onclick=async ()=>{
+    box.classList.add("hidden");
+    try{ document.cookie="nohint=1;max-age=15552000;path=/"; }catch(e){}
+  };
+}
+window.addEventListener("error",e=>{ toast("エラー："+(e.message||"")); });
+window.addEventListener("unhandledrejection",e=>{
+  const m=(e.reason&&e.reason.message)||""; if(m) toast("エラー："+m);
+});
+(async function boot(){
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+    try{ await navigator.serviceWorker.register("sw.js"); }catch(e){}
+  }
+  await Store.open();
+  if(navigator.storage&&navigator.storage.persist){
+    try{ await navigator.storage.persist(); }catch(e){}
+  }
+  const saved=await Store.get();
+  if(!saved){ S=blank(); }
+  else{
+    const r=migrate(saved);
+    if(r.error==="newer"){
+      S=blank();
+      toast("この端末の記録は、新しい版のアプリで作られています。\n古い版で開くと壊れるおそれがあるため、読み込みませんでした。\nアプリを最新にしてから開いてください。");
+      locked=true;
+    }else if(r.error){
+      S=blank();
+      toast("記録を読み込めませんでした。書き出したファイルがあれば、設定から読み込んでください。");
+    }else{
+      if(r.migrated){ await Store.set(saved,"state_before_migration"); }
+      S=r.state;
+      if(r.migrated){ await Store.set(S); }
+    }
+  }
+  if(S.settings.pass) lock();
+  render();
+  setTimeout(installHint,1500);
+  window.addEventListener("beforeunload",e=>{ if(dirty) Store.set(S); });
+})();
+</script>
+</body>
+</html>
