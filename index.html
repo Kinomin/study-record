@@ -138,8 +138,8 @@ nav#tabs.hide{display:none;}
 #lock .msg{font-size:12.5px;color:#8FA095;min-height:20px;}
 
 /* modal */
-#modal{position:fixed;inset:0;z-index:90;background:rgba(20,24,22,.5);display:flex;align-items:flex-end;justify-content:center;}
-#modal .sheet{background:var(--paper);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:20px 18px calc(24px + var(--safe-b));max-height:90vh;overflow:auto;}
+#modal{position:fixed;inset:0;z-index:90;background:rgba(20,24,22,.5);display:flex;align-items:center;justify-content:center;padding:20px;}
+#modal .sheet{background:var(--paper);width:100%;max-width:420px;border-radius:16px;padding:22px 20px;max-height:85vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35);}
 .hidden{display:none !important;}
 /* カレンダー */
 .calhead{display:flex;align-items:center;justify-content:space-between;margin:4px 0 8px;}
@@ -266,6 +266,7 @@ let S=null, dirty=false, lockTimer=null, lastActive=Date.now();
    構造を変えるときは SCHEMA を上げ、MIGRATIONS に一段ずつ足す。
    移行の前には、必ず元の状態を別のキーに退避する。
    ------------------------------------------------------------ */
+const APP_VERSION="2026.07.26-b";   // 画面の版。設定の一番下に出る。
 const SCHEMA=3;
 function blank(){
   return {
@@ -740,8 +741,9 @@ function subjectPicker(sel){
   return `<div class="field"><label>教科</label>
     <div class="chips" id="sb">${S.subjects.map(s=>
       `<button class="chip${s.id===pickedSubject?" on":""}" data-s="${s.id}">${esc(s.name)}</button>`).join("")}
-      <button class="chip add" data-s="new">＋ 教科を追加</button></div>
-    ${S.subjects.length?"":'<p class="hint">最初は空です。使う教科だけ追加してください</p>'}</div>`;
+      <button class="chip add" data-s="new">＋ 教科を追加</button>
+      <button class="chip add" data-s="manage">教科を編集</button></div>
+    ${S.subjects.length?'<p class="hint">同じ教科をもう一度押すと、選択を外せます</p>':'<p class="hint">最初は空です。使う教科だけ追加してください</p>'}</div>`;
 }
 function bindSubjects(){
   const el=V.querySelector("#sb"); if(!el) return;
@@ -749,15 +751,72 @@ function bindSubjects(){
     const b=e.target.closest("[data-s]"); if(!b) return;
     if(b.dataset.s==="new"){
       const n=await ask("教科を追加",null,{ph:"数学 / 英語 / 物理基礎 など"}); if(!n||!n.trim()) return;
-      const s={id:uid(),name:n.trim()}; S.subjects.push(s); save();
+      const s={id:uid(),name:n.trim()}; S.subjects.push(s); await saveNow();
       pickedSubject=s.id;
       b.insertAdjacentHTML("beforebegin",`<button class="chip on" data-s="${s.id}">${esc(s.name)}</button>`);
-      el.querySelectorAll(".chip").forEach(c=>{ if(c.dataset.s!==s.id) c.classList.remove("on"); });
+      el.querySelectorAll(".chip[data-s]").forEach(c=>{ if(c.dataset.s!==s.id) c.classList.remove("on"); });
       return;
     }
-    el.querySelectorAll(".chip").forEach(c=>c.classList.remove("on"));
-    b.classList.add("on"); pickedSubject=b.dataset.s;
+    if(b.dataset.s==="manage"){
+      const changed=await manageSubjects();
+      if(changed) render();
+      return;
+    }
+    const already=b.classList.contains("on");
+    el.querySelectorAll(".chip[data-s]").forEach(c=>c.classList.remove("on"));
+    if(already){ pickedSubject=null; }
+    else{ b.classList.add("on"); pickedSubject=b.dataset.s; }
   };
+}
+
+/* 教科の名前を直す・削除する。既存の記録は教科名だけが変わり、
+   削除した教科が付いていたものは「教科なし」として残る（記録は消えない）。 */
+function manageSubjects(){
+  return dialog(`
+    <p style="font-size:16px;font-weight:700;margin:0 0 12px">教科を編集</p>
+    <div id="sjlist"></div>
+    <button class="btn ghost" id="sjclose" style="margin-top:14px">閉じる</button>`,
+  (el,done)=>{
+    let changed=false;
+    const draw=()=>{
+      const list=el.querySelector("#sjlist");
+      if(!S.subjects.length){ list.innerHTML='<p class="hint">教科がありません</p>'; return; }
+      list.innerHTML=S.subjects.map(s=>`
+        <div class="rowsplit">
+          <div class="k">${esc(s.name)}</div>
+          <div style="display:flex;gap:6px">
+            <button class="chip" data-ed="${s.id}">名前を直す</button>
+            <button class="chip" data-rm="${s.id}" style="color:var(--red)">削除</button>
+          </div>
+        </div>`).join("");
+    };
+    draw();
+    el.querySelector("#sjlist").onclick=async ev=>{
+      const ed=ev.target.closest("[data-ed]");
+      if(ed){
+        const s=S.subjects.find(x=>x.id===ed.dataset.ed);
+        const n=await ask("教科の名前",s.name,{ph:"数学 / 英語 / 物理基礎 など"});
+        if(n&&n.trim()){ s.name=n.trim(); await saveNow(); changed=true; draw(); }
+        return;
+      }
+      const rm=ev.target.closest("[data-rm]");
+      if(rm){
+        const s=S.subjects.find(x=>x.id===rm.dataset.rm);
+        const n=mine(S.tasks).filter(t=>t.subjectId===s.id).length
+               + mine(S.tests).filter(t=>t.subjectId===s.id).length
+               + mine(S.events).filter(t=>t.subjectId===s.id).length;
+        const msg=n>0
+          ? `「${s.name}」を削除します。\nこの教科が付いている${n}件は、教科なしになります。\n記録そのものは消えません。`
+          : `「${s.name}」を削除します。`;
+        if(!await ok(msg,{title:"教科を削除",danger:true,okLabel:"削除"})) return;
+        [S.tasks,S.tests,S.events].forEach(arr=>arr.forEach(x=>{ if(x.subjectId===s.id) x.subjectId=null; }));
+        S.subjects=S.subjects.filter(x=>x.id!==s.id);
+        if(pickedSubject===s.id) pickedSubject=null;
+        await saveNow(); changed=true; draw();
+      }
+    };
+    el.querySelector("#sjclose").onclick=()=>done(changed);
+  });
 }
 
 /* ---------- カレンダー ---------- */
@@ -1360,7 +1419,26 @@ function viewSet(){
   <div class="note"><b>記録は送信しません。</b>アプリの画面を読み込むとき以外、通信しません。一度開けば、機内モードでもすべての機能が動きます。利用状況の送信、広告、外部への解析は組み込まれていません。${Store.persistent()?"":"<br><br><b>注意：</b>この環境では保存領域が使えないため、閉じると記録が消えます。ファイルを保存して開き直してください。"}</div>
   <div class="rowsplit" style="border:0"><div><div class="k" style="color:var(--red)">すべての記録を消す</div><div class="d">取り消せません</div></div>
     <button class="chip" id="dl">消す</button></div>
-  <p class="hint" style="text-align:center;margin-top:22px">記録 ${S.records.length}件／テスト ${S.tests.length}件／やること ${S.tasks.length}件<br>データ形式 v${S.v}</p>`;
+  <p class="sec">アプリの更新</p>
+  <div class="rowsplit"><div><div class="k">最新の状態にする</div>
+    <div class="d">画面が古いままのときに押してください</div></div>
+    <button class="chip" id="upd">更新</button></div>
+  <div class="note">記録は消えません。画面の部品だけを取り直します。</div>
+  <p class="hint" style="text-align:center;margin-top:22px">記録 ${S.records.length}件／テスト ${S.tests.length}件／やること ${S.tasks.length}件・予定 ${S.events.length}件<br>
+    画面の版 ${APP_VERSION}／データ形式 v${S.v}</p>`;
+  $("#upd").onclick=async ()=>{
+    if(!await ok("画面の部品を取り直して、開き直します。\n記録はそのまま残ります。",
+      {title:"最新の状態にする",okLabel:"実行する"})) return;
+    await saveNow();
+    try{
+      if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); }
+      if(navigator.serviceWorker){
+        const rs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(rs.map(r=>r.unregister()));
+      }
+    }catch(e){}
+    location.replace(location.pathname+"?u="+Date.now());
+  };
   $("#dels").onclick=async ()=>{
     const st=me();
     if(!await ok(`${st.name}さんのテスト・記録・やることを、すべて消します。\n取り消せません。`,{title:"記録を消す",danger:true,okLabel:"消す"})) return;
@@ -1581,7 +1659,18 @@ window.addEventListener("unhandledrejection",e=>{
 });
 (async function boot(){
   if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-    try{ await navigator.serviceWorker.register("sw.js"); }catch(e){}
+    try{
+      const reg=await navigator.serviceWorker.register("sw.js",{updateViaCache:"none"});
+      // 新しい版に入れ替わったら、一度だけ自動で開き直す
+      let reloaded=false;
+      navigator.serviceWorker.addEventListener("controllerchange",()=>{
+        if(reloaded) return; reloaded=true; location.reload();
+      });
+      // 開いたとき・戻ってきたときに更新を確認する
+      const check=()=>{ try{ reg.update(); }catch(e){} };
+      check();
+      document.addEventListener("visibilitychange",()=>{ if(!document.hidden) check(); });
+    }catch(e){}
   }
   await Store.open();
   if(navigator.storage&&navigator.storage.persist){
