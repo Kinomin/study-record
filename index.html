@@ -39,6 +39,7 @@ button{background:none;border:0;padding:0;cursor:pointer;}
 /* layout */
 #app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;}
 .view{flex:1;padding:14px 18px calc(84px + var(--safe-b));}
+body.hint .view{padding-bottom:calc(240px + var(--safe-b));}
 .vhead{padding-top:10px;}
 .eyebrow{font-size:11px;letter-spacing:.16em;color:var(--ink-faint);margin:0 0 2px;}
 h1.t{font-size:23px;font-weight:800;margin:0 0 3px;letter-spacing:.01em;}
@@ -80,6 +81,7 @@ nav#tabs.hide{display:none;}
 .item .body{flex:1;min-width:0;}
 .item .tt{font-size:14.5px;font-weight:500;word-break:break-word;}
 .item .tt.done{color:var(--ink-faint);text-decoration:line-through;text-decoration-color:var(--red);}
+.item.isdone{opacity:.5;}
 .item .mm{font-size:11px;color:var(--ink-faint);margin-top:1px;}
 .cbx{width:22px;height:22px;border:1.5px solid #B9C0C6;border-radius:6px;flex:none;margin-top:2px;position:relative;}
 .cbx.on{border-color:var(--red);background:var(--red);}
@@ -139,6 +141,31 @@ nav#tabs.hide{display:none;}
 #modal{position:fixed;inset:0;z-index:90;background:rgba(20,24,22,.5);display:flex;align-items:flex-end;justify-content:center;}
 #modal .sheet{background:var(--paper);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:20px 18px calc(24px + var(--safe-b));max-height:90vh;overflow:auto;}
 .hidden{display:none !important;}
+/* カレンダー */
+.calhead{display:flex;align-items:center;justify-content:space-between;margin:4px 0 8px;}
+.calhead .m{font-size:16px;font-weight:700;}
+.calhead button{border:1px solid var(--rule);border-radius:8px;padding:5px 13px;font-size:14px;color:var(--ink-soft);background:#fff;}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal .wd{text-align:center;font-size:10px;color:var(--ink-faint);padding:2px 0 4px;}
+.cal .wd.s{color:var(--indigo);} .cal .wd.t{color:var(--red);}
+.cal .d{aspect-ratio:1/1;border-radius:9px;background:#fff;border:1px solid var(--rule);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:13.5px;color:var(--ink);padding:0;}
+.cal .d.out{background:transparent;border-color:transparent;color:#CDD2D6;}
+.cal .d.today{border-color:var(--ink);border-width:1.5px;font-weight:700;}
+.cal .d.sel{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:700;}
+.cal .dots{display:flex;gap:2.5px;height:5px;}
+.cal .dot{width:5px;height:5px;border-radius:99px;}
+.cal .d.sel .dot{outline:1px solid rgba(255,255,255,.5);}
+.dk-task{background:var(--indigo);} .dk-rec{background:#4A5560;}
+.dk-test{background:var(--red);} .dk-free{background:var(--gold);}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 2px;font-size:11px;color:var(--ink-soft);}
+.legend span{display:flex;align-items:center;gap:5px;}
+.legend i{width:7px;height:7px;border-radius:99px;display:block;}
+.daybox{border-top:1px solid var(--rule);margin-top:14px;padding-top:10px;}
+.addgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.addgrid button{border:1px solid var(--rule);border-radius:10px;padding:11px 6px;font-size:12.5px;
+  color:var(--ink);background:#fff;font-weight:500;}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + var(--safe-b));
   z-index:120;background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;
   max-width:88%;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:tin .2s ease-out;}
@@ -146,10 +173,10 @@ nav#tabs.hide{display:none;}
 @keyframes tin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 #install{position:fixed;left:12px;right:12px;bottom:calc(70px + var(--safe-b));z-index:50;
   max-width:536px;margin:0 auto;background:var(--ink);color:#fff;border-radius:12px;
-  padding:12px 14px;font-size:12.5px;line-height:1.6;box-shadow:0 10px 30px rgba(0,0,0,.25);
-  display:flex;gap:10px;align-items:center;}
+  padding:13px 14px;font-size:12.5px;line-height:1.75;box-shadow:0 10px 30px rgba(0,0,0,.25);
+  display:flex;gap:10px;align-items:flex-start;max-height:70vh;overflow:auto;}
 #install b{font-weight:700;}
-#install button{color:#fff;opacity:.65;font-size:12px;flex:none;padding:4px 6px;}
+#install button{color:#fff;opacity:.65;font-size:12px;flex:none;padding:4px 6px;margin-top:-2px;}
 
 /* print sheet */
 #printarea{display:none;}
@@ -230,7 +257,7 @@ const Store = (() => {
    ============================================================ */
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const KINDS={small:"小テスト",unit:"単元テスト",term:"定期テスト"};
-const TASKKINDS={hw:"課題",submit:"提出物",item:"持ち物",exam:"テスト予告"};
+const TASKKINDS={hw:"課題",submit:"提出物",item:"持ち物"};
 
 let S=null, dirty=false, lockTimer=null, lastActive=Date.now();
 
@@ -239,15 +266,28 @@ let S=null, dirty=false, lockTimer=null, lastActive=Date.now();
    構造を変えるときは SCHEMA を上げ、MIGRATIONS に一段ずつ足す。
    移行の前には、必ず元の状態を別のキーに退避する。
    ------------------------------------------------------------ */
-const SCHEMA=2;
+const SCHEMA=3;
 function blank(){
   return {
-    v:SCHEMA, students:[], activeId:null, subjects:[], tests:[], records:[], tasks:[],
+    v:SCHEMA, students:[], activeId:null, subjects:[], tests:[], records:[], tasks:[], events:[],
     settings:{ pass:null, failCount:0, lockUntil:null, autoLock:3, lastExport:null,
                grouped:{}, goals:{}, remindExport:true }
   };
 }
 const MIGRATIONS={
+  // v2 → v3：予定(events)の新設。テスト予告のやることを予定へ移す。
+  2(st){
+    st.events=st.events||[];
+    const rest=[];
+    (st.tasks||[]).forEach(t=>{
+      if(t.kind==="exam"){
+        st.events.push({id:t.id,studentId:t.studentId,date:t.due||null,
+          title:t.title,kind:"test",subjectId:t.subjectId||null,note:t.memo||""});
+      }else rest.push(t);
+    });
+    st.tasks=rest;
+    return st;
+  },
   // v1 → v2：設定項目の追加と、参照切れの掃除
   1(st){
     st.settings=st.settings||{};
@@ -257,6 +297,7 @@ const MIGRATIONS={
     const sid=new Set((st.students||[]).map(s=>s.id));
     st.records=(st.records||[]).filter(r=>tid.has(r.testId)&&sid.has(r.studentId));
     st.tasks=(st.tasks||[]).filter(t=>sid.has(t.studentId));
+    st.events=(st.events||[]).filter(e=>sid.has(e.studentId));
     st.tests=(st.tests||[]).filter(t=>sid.has(t.studentId));
     return st;
   }
@@ -370,6 +411,37 @@ function analyze(tests){
   }
   return a;
 }
+/* 目標：本人が決めたものを最優先。無ければ記録から算出したものを使う。 */
+function goalOf(t,a){
+  const m=S.settings.goals[t.id];
+  if(m!=null) return {v:m, note:"自分で決めた目標", manual:true};
+  if(a && a.enough && a.goal!==null) return {v:a.goal, note:a.goalNote, manual:false};
+  return null;
+}
+async function askGoal(t,cur){
+  const v=await ask("目標にする点数",cur==null?"":String(cur),{mode:"numeric",note:`0〜${t.max}点`});
+  if(v===null) return false;
+  if(String(v).trim()==="") { delete S.settings.goals[t.id]; await saveNow(); return true; }
+  const n=Math.round(+v);
+  if(isNaN(n)||n<0||n>t.max){ toast(`0〜${t.max}で入れてください`); return false; }
+  S.settings.goals[t.id]=n; await saveNow(); return true;
+}
+function goalCard(t,a){
+  const g=goalOf(t,a);
+  if(g) return `<div class="card ink">
+    <p class="eyebrow" style="margin:0">次の目標</p>
+    <div style="display:flex;align-items:baseline;gap:10px;margin-top:2px">
+      <span class="goalv">${g.v}点</span>
+      <span style="font-size:12.5px;color:var(--ink-soft)">${esc(g.note)}</span>
+    </div>
+    <div class="chips"><button class="chip" data-goal="${t.id}">目標を決め直す</button></div></div>`;
+  return `<div class="card">
+    <p class="eyebrow" style="margin:0">次の目標</p>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:2px 0 0">
+      まだ決めていません。記録が${MIN_N}回になると自動でも出せますが、いま自分で決めることもできます。</p>
+    <div class="chips"><button class="chip on" data-goal="${t.id}">目標を決める</button></div></div>`;
+}
+
 /* まとめて見る：教科＋テスト名が同一のものを束ねる */
 const gkey = t => `${t.subjectId||"-"}::${t.name}`;
 function groupsFor(studentId){
@@ -497,10 +569,7 @@ function toast(msg){
 /* 要素が無くても以降の処理が止まらないようにする */
 function $(sel){ return V.querySelector(sel) || {}; }
 function scoreMark(score,best,cls){
-  const hit = best===null || score>=best;
-  return hit
-    ? `<span class="maru ${cls}">${MARU}<span class="n">${score}</span></span>`
-    : `<span class="plain ${cls}">${score}</span>`;
+  return `<span class="plain ${cls}">${score}</span>`;
 }
 
 function render(){
@@ -518,15 +587,20 @@ function render(){
 function draw(){
   if(!S.students.length){ TABS.classList.add("hide"); return viewSetup(); }
   TABS.classList.remove("hide");
-  TABS.innerHTML=[["tasks","やること"],["rec","記録"],["ana","分析"],["set","設定"]]
-    .map(([k,l])=>`<button data-tab="${k}" class="${route.startsWith(k)?"on":""}">${l}</button>`).join("");
-  ({tasks:viewTasks,taskadd:viewTaskAdd,rec:viewRec,recnew:viewTestNew,recdone:viewRecDone,
+  const GROUP={tasks:"tasks",taskadd:"tasks",cal:"cal",evadd:"cal",
+    rec:"rec",recnew:"rec",recdone:"rec",recmanage:"rec",reclist:"rec",
+    ana:"ana",set:"set",sheet:"set",transfer:"set"};
+  const g=GROUP[route]||"tasks";
+  TABS.innerHTML=[["tasks","やること"],["cal","カレンダー"],["rec","記録"],["ana","分析"],["set","設定"]]
+    .map(([k,l])=>`<button data-tab="${k}" class="${g===k?"on":""}">${l}</button>`).join("");
+  ({tasks:viewTasks,taskadd:viewTaskAdd,cal:viewCal,evadd:viewEvAdd,
+    rec:viewRec,recnew:viewTestNew,recdone:viewRecDone,
     recmanage:viewManage,reclist:viewList,ana:viewAna,set:viewSet,sheet:viewSheet,transfer:viewTransfer
    }[route]||viewTasks)();
 }
 TABS.addEventListener("click",e=>{
   const b=e.target.closest("[data-tab]"); if(!b) return;
-  go(b.dataset.tab==="rec"?"rec":b.dataset.tab);
+  go(b.dataset.tab);
 });
 
 /* ---------- 初回設定 ---------- */
@@ -561,7 +635,7 @@ function setupPass(){
   <p class="sub">端末を貸したときに、記録が見られないようにします。</p></div>
   <div class="field"><label>4桁の数字</label><input id="p1" type="password" inputmode="numeric" maxlength="4" placeholder="••••"></div>
   <div class="field"><label>もう一度</label><input id="p2" type="password" inputmode="numeric" maxlength="4" placeholder="••••"></div>
-  <div class="note"><b>忘れても記録は消えません。</b>3回まちがえると、1時間後にパスコードなしで開けるようになります。書き出したファイルの合言葉とは、別のものです。</div>
+  <div class="note"><b>忘れても記録は消えません。</b>3回まちがえると、1時間後にパスコードなしで開けるようになります。</div>
   <button class="btn" id="ok">決める</button>
   <button class="btn ghost" id="skip">あとで設定する</button>`;
   $("#ok").onclick=async()=>{
@@ -576,25 +650,26 @@ function setupPass(){
 /* ---------- やること ---------- */
 function viewTasks(){
   const t=mine(S.tasks), fil=ctx.f||"soon";
-  const open=t.filter(x=>!x.done), done=t.filter(x=>x.done);
-  let list;
-  if(fil==="soon") list=open.filter(x=>!x.due || diffDays(today(),x.due)<=1).sort(byDue);
-  else if(fil==="week") list=open.filter(x=>!x.due || diffDays(today(),x.due)<=7).sort(byDue);
-  else list=done.slice().sort((a,b)=>(b.doneAt||"").localeCompare(a.doneAt||""));
-  const exams=mine(S.tasks).filter(x=>x.kind==="exam"&&!x.done).sort(byDue).slice(0,3);
+  const open=t.filter(x=>!x.done);
+  const span = fil==="week" ? 7 : 1;
+  // 終わったものも同じ一覧に残し、薄く表示する（消えると達成が見えなくなるため）
+  const list=t.filter(x=>!x.due || diffDays(today(),x.due)<=span).sort(byDue);
+  const exams=mine(S.events).filter(e=>e.kind==="test"&&e.date&&e.date>=today())
+    .sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
   V.innerHTML=`
   <div class="vhead"><p class="eyebrow">${fmt(today(),true)}</p>
   <h1 class="t">やること</h1><p class="sub">残り${open.length}件</p></div>
   <div class="chips">
-    ${[["soon","今日・明日"],["week","今週"],["done","終わった"]].map(([k,l])=>
+    ${[["soon","今日・明日"],["week","今週"]].map(([k,l])=>
       `<button class="chip${fil===k?" on":""}" data-f="${k}">${l}</button>`).join("")}
   </div>
   <div id="list">${list.length? list.map(taskRow).join("") :
-    `<div class="empty">${fil==="done"?"まだありません":"いまのところ、ありません"}</div>`}</div>
+    `<div class="empty">いまのところ、ありません</div>`}</div>
   ${exams.length?`<p class="sec">近いテスト</p>${exams.map(x=>
     `<div class="item"><div class="body"><div class="tt">${esc(x.title)}</div>
-    <div class="mm">${x.due?fmt(x.due)+"・"+relDay(x.due):"日付なし"}</div></div>
-    <button class="chip" data-goexam="${x.id}">点数を入れる</button></div>`).join("")}`:""}
+    <div class="mm">${fmt(x.date)}・${relDay(x.date)}${x.note?"・"+esc(x.note):""}</div></div>
+    <button class="chip" data-goexam="${x.date}">点数</button>
+    <button class="chip" data-eved="${x.id}">直す</button></div>`).join("")}`:""}
   <button class="btn" data-act="add">＋ 追加する</button>`;
   $(".chips").onclick=async e=>{const b=e.target.closest("[data-f]"); if(b) go("tasks",{f:b.dataset.f});};
   V.onclick=async e=>{
@@ -603,13 +678,14 @@ function viewTasks(){
     const d=e.target.closest("[data-del]");
     if(d){ if(await ok("この予定を削除しますか",{danger:true,okLabel:"削除"})){ S.tasks=S.tasks.filter(t=>t.id!==d.dataset.del); await saveNow(); render(); } return; }
     if(e.target.closest('[data-act="add"]')) go("taskadd");
-    const g=e.target.closest("[data-goexam]"); if(g) go("rec");
+    const g=e.target.closest("[data-goexam]"); if(g) return go("rec",{date:g.dataset.goexam});
+    const ed=e.target.closest("[data-eved]"); if(ed) return go("evadd",{id:ed.dataset.eved});
   };
 }
 const byDue=(a,b)=>(a.due||"9999").localeCompare(b.due||"9999");
 function taskRow(x){
   const over = x.due && diffDays(today(),x.due)<0 && !x.done;
-  return `<div class="item">
+  return `<div class="item${x.done?" isdone":""}">
     <button class="cbx ${x.done?"on":""}" data-done="${x.id}" aria-label="完了"></button>
     <div class="body"><div class="tt ${x.done?"done":""}">${esc(x.title)}
       ${x.due&&diffDays(today(),x.due)===1?'<span class="tag due">明日</span>':""}
@@ -621,6 +697,7 @@ function taskRow(x){
 
 /* ---------- やることを追加 ---------- */
 function viewTaskAdd(){
+  const preset = ctx.due || addDays(today(),1);
   V.innerHTML=`
   <div class="vhead"><h1 class="t">追加する</h1></div>
   <div class="chips" id="kd">${Object.entries(TASKKINDS).map(([k,l],i)=>
@@ -628,11 +705,11 @@ function viewTaskAdd(){
   <div class="field"><label>内容</label><input id="ti" type="text" placeholder="数学ワーク p.42-43"></div>
   <div class="field"><label>期限</label>
     <div class="chips" id="dq">
-      <button class="chip" data-d="0">今日</button>
-      <button class="chip on" data-d="1">明日</button>
-      <button class="chip" data-d="7">1週間後</button>
+      <button class="chip${preset===today()?" on":""}" data-d="0">今日</button>
+      <button class="chip${preset===addDays(today(),1)?" on":""}" data-d="1">明日</button>
+      <button class="chip${preset===addDays(today(),7)?" on":""}" data-d="7">1週間後</button>
     </div>
-    <input id="dt" type="date" value="${addDays(today(),1)}" style="margin-top:8px">
+    <input id="dt" type="date" value="${preset}" style="margin-top:8px">
   </div>
   ${subjectPicker()}
   <div class="field"><label>メモ（任意）</label><textarea id="mo" placeholder="未入力"></textarea></div>
@@ -650,9 +727,10 @@ function viewTaskAdd(){
     if(!title) return toast("内容を入れてください");
     S.tasks.push({id:uid(),studentId:S.activeId,title,kind,subjectId:pickedSubject,
       due:V.querySelector("#dt").value||null,memo:V.querySelector("#mo").value.trim(),done:false,doneAt:null});
-    await saveNow(); go("tasks");
+    await saveNow();
+    ctx.due? go("cal",{m:ym($("#dt").value),d:$("#dt").value}) : go("tasks");
   };
-  $("#cc").onclick=()=>go("tasks");
+  $("#cc").onclick=()=>ctx.due? go("cal",{m:ym(ctx.due),d:ctx.due}) : go("tasks");
 }
 
 /* 教科ピッカー（既定は空。その場で追加できる） */
@@ -682,6 +760,172 @@ function bindSubjects(){
   };
 }
 
+/* ---------- カレンダー ---------- */
+const EVKINDS={test:"テストの予定",free:"予定"};
+function ym(d){ return d.slice(0,7); }
+function monthCells(m){
+  const [y,mo]=m.split("-").map(Number);
+  const first=new Date(y,mo-1,1);
+  const start=new Date(y,mo-1,1-first.getDay());
+  const cells=[];
+  for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); cells.push(iso(d)); }
+  while(cells.length>35 && cells.slice(35).every(c=>ym(c)!==m)) cells.length=35;
+  return cells;
+}
+function shiftMonth(m,n){
+  const [y,mo]=m.split("-").map(Number);
+  const d=new Date(y,mo-1+n,1);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+}
+function dayItems(date){
+  return {
+    tasks: mine(S.tasks).filter(t=>t.due===date),
+    recs:  mine(S.records).filter(r=>r.date===date),
+    evs:   mine(S.events).filter(e=>e.date===date)
+  };
+}
+function viewCal(){
+  const m = ctx.m || ym(today());
+  const sel = ctx.d || (ym(today())===m ? today() : null);
+  const cells=monthCells(m);
+  const [yy,mm]=m.split("-");
+
+  const cell=d=>{
+    const it=dayItems(d);
+    const dots=[];
+    if(it.tasks.some(t=>!t.done)) dots.push("dk-task");
+    if(it.recs.length) dots.push("dk-rec");
+    if(it.evs.some(e=>e.kind==="test")) dots.push("dk-test");
+    if(it.evs.some(e=>e.kind==="free")) dots.push("dk-free");
+    const cls=["d"];
+    if(ym(d)!==m) cls.push("out");
+    if(d===today()) cls.push("today");
+    if(d===sel) cls.push("sel");
+    return `<button class="${cls.join(" ")}" data-day="${d}">
+      <span>${+d.slice(8)}</span>
+      <span class="dots">${dots.slice(0,4).map(k=>`<i class="dot ${k}"></i>`).join("")}</span></button>`;
+  };
+
+  let detail="";
+  if(sel){
+    const it=dayItems(sel);
+    const rows=[];
+    it.evs.forEach(e=>rows.push(`<div class="item"><div class="body">
+      <div class="tt">${esc(e.title)}<span class="tag ${e.kind==="test"?"due":""}">${EVKINDS[e.kind]}</span></div>
+      <div class="mm">${e.subjectId?esc(subName(e.subjectId))+"・":""}${esc(e.note||"")}</div></div>
+      ${e.kind==="test"?`<button class="chip" data-recfor="${sel}">点数</button>`:""}
+      <button class="chip" data-eved="${e.id}">直す</button></div>`));
+    it.tasks.forEach(t=>rows.push(`<div class="item">
+      <button class="cbx ${t.done?"on":""}" data-done="${t.id}" aria-label="完了"></button>
+      <div class="body"><div class="tt ${t.done?"done":""}">${esc(t.title)}<span class="tag">${TASKKINDS[t.kind]||"やること"}</span></div>
+      <div class="mm">${t.subjectId?esc(subName(t.subjectId)):""}</div></div></div>`));
+    it.recs.forEach(r=>{
+      const t=S.tests.find(x=>x.id===r.testId)||{name:"?",max:100};
+      rows.push(`<div class="item"><div class="body">
+        <div class="tt">${esc(t.name)}<span class="tag max">${t.max}点</span></div>
+        <div class="mm">記録した点数</div></div>
+        <span class="plain sm">${r.score} / ${t.max}</span></div>`);
+    });
+    detail=`<div class="daybox">
+      <p class="s-head" style="font-size:13px;color:var(--ink);font-weight:700;margin:0 0 4px">${fmt(sel,true)}</p>
+      ${rows.length? rows.join("") : `<div class="empty" style="padding:18px">この日は何もありません</div>`}
+      <div class="addgrid">
+        <button data-add="task">＋ やること</button>
+        <button data-add="test">＋ テストの予定</button>
+        <button data-add="free">＋ 予定</button>
+        <button data-add="score">＋ 点数を記録</button>
+      </div></div>`;
+  }
+
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">カレンダー</h1>
+  <p class="sub">日を選ぶと、その日の予定と記録が見られます。</p></div>
+  <div class="calhead">
+    <button data-mv="-1">‹</button>
+    <span class="m">${yy}年 ${+mm}月</span>
+    <button data-mv="1">›</button>
+  </div>
+  <div class="cal">
+    ${["日","月","火","水","木","金","土"].map((w,i)=>
+      `<div class="wd ${i===0?"t":i===6?"s":""}">${w}</div>`).join("")}
+    ${cells.map(cell).join("")}
+  </div>
+  <div class="legend">
+    <span><i class="dk-task"></i>やること</span>
+    <span><i class="dk-test"></i>テスト</span>
+    <span><i class="dk-free"></i>予定</span>
+    <span><i class="dk-rec"></i>記録した点数</span>
+  </div>
+  ${detail}`;
+
+  V.onclick=async e=>{
+    const mv=e.target.closest("[data-mv]");
+    if(mv) return go("cal",{m:shiftMonth(m,+mv.dataset.mv),d:null});
+    const dy=e.target.closest("[data-day]");
+    if(dy){ const d=dy.dataset.day; return go("cal",{m:ym(d),d}); }
+    const ck=e.target.closest("[data-done]");
+    if(ck){ const t=S.tasks.find(x=>x.id===ck.dataset.done);
+      t.done=!t.done; t.doneAt=t.done?today():null; await saveNow(); return render(); }
+    const ed=e.target.closest("[data-eved]");
+    if(ed) return go("evadd",{id:ed.dataset.eved});
+    const rf=e.target.closest("[data-recfor]");
+    if(rf) return go("rec",{date:rf.dataset.recfor});
+    const ad=e.target.closest("[data-add]");
+    if(ad){
+      const k=ad.dataset.add;
+      if(k==="task")  return go("taskadd",{due:sel});
+      if(k==="score") return go("rec",{date:sel});
+      return go("evadd",{date:sel,kind:k});
+    }
+  };
+}
+
+/* ---------- 予定の追加・変更 ---------- */
+function viewEvAdd(){
+  const ev = ctx.id ? mine(S.events).find(x=>x.id===ctx.id) : null;
+  const date = ev ? ev.date : (ctx.date||today());
+  const kind = ev ? ev.kind : (ctx.kind==="test"?"test":"free");
+  const back = ()=>go("cal",{m:ym(date||today()),d:date});
+  if(ctx.id && !ev){ toast("予定が見つかりませんでした"); return back(); }
+  V.innerHTML=`
+  <div class="vhead"><h1 class="t">${ev?"予定を直す":(kind==="test"?"テストの予定":"予定を追加")}</h1>
+  <p class="sub">${fmt(date,true)}</p></div>
+  <div class="chips" id="kd">
+    <button class="chip${kind==="test"?" on":""}" data-k="test">テストの予定</button>
+    <button class="chip${kind==="free"?" on":""}" data-k="free">予定</button>
+  </div>
+  <div class="field"><label>内容</label>
+    <input id="ti" type="text" value="${ev?esc(ev.title):""}"
+      placeholder="${kind==="test"?"英単語テスト":"部活の大会 / 三者面談 など"}"></div>
+  <div class="field"><label>日付</label><input id="dt" type="date" value="${date}"></div>
+  ${subjectPicker(ev?ev.subjectId:null)}
+  <div class="field"><label>メモ（任意）</label><textarea id="mo" placeholder="範囲 100〜140 など">${ev?esc(ev.note||""):""}</textarea></div>
+  <button class="btn" id="ok">${ev?"直す":"追加する"}</button>
+  ${ev?`<button class="btn ghost" id="dl" style="color:var(--red)">この予定を削除する</button>`:""}
+  <button class="btn ghost" id="cc">やめる</button>`;
+  let k=kind;
+  $("#kd").onclick=e=>{ const b=e.target.closest("[data-k]"); if(!b) return;
+    V.querySelectorAll("#kd .chip").forEach(c=>c.classList.remove("on"));
+    b.classList.add("on"); k=b.dataset.k; };
+  bindSubjects();
+  $("#ok").onclick=async ()=>{
+    const title=$("#ti").value.trim();
+    if(!title) return toast("内容を入れてください");
+    const d=$("#dt").value||date;
+    const note=$("#mo").value.trim();
+    if(ev){ Object.assign(ev,{title,date:d,kind:k,subjectId:pickedSubject,note}); }
+    else{ S.events.push({id:uid(),studentId:S.activeId,date:d,title,kind:k,subjectId:pickedSubject,note}); }
+    await saveNow(); go("cal",{m:ym(d),d});
+  };
+  const dl=V.querySelector("#dl");
+  if(dl) dl.onclick=async ()=>{
+    if(!await ok("この予定を削除しますか",{danger:true,okLabel:"削除"})) return;
+    S.events=S.events.filter(x=>x.id!==ev.id);
+    await saveNow(); back();
+  };
+  $("#cc").onclick=back;
+}
+
 /* ---------- 点数を記録 ---------- */
 function viewRec(){
   const tests=mine(S.tests).filter(t=>!t.archived)
@@ -709,15 +953,14 @@ function viewRec(){
   </div>
   <div class="field"><label>実施日</label>
     <div class="chips" id="dq">
-      <button class="chip on" data-d="0">今日</button>
-      <button class="chip" data-d="-1">昨日</button>
-      <button class="chip" data-d="-7">1週間前</button>
+      <button class="chip${(ctx.date||today())===today()?" on":""}" data-d="0">今日</button>
+      <button class="chip${ctx.date===addDays(today(),-1)?" on":""}" data-d="-1">昨日</button>
     </div>
-    <input id="dt" type="date" value="${today()}" max="${today()}" style="margin-top:8px">
+    <input id="dt" type="date" value="${ctx.date||today()}" max="${today()}" style="margin-top:8px">
     <p class="hint" id="dh"></p>
   </div>
   <div class="field"><label>範囲・単元（任意）</label><input id="rg" type="text" placeholder="未入力"></div>
-  ${a&&a.enough&&a.goal!==null?`<div class="note">いまの目標は <b>${a.goal}点</b>（${esc(a.goalNote)}）</div>`:""}
+  ${(()=>{const g=goalOf(cur,a); return g?`<div class="note">いまの目標は <b>${g.v}点</b>（${esc(g.note)}）</div>`:"";})()}
   <button class="btn" id="ok">記録する</button>
   ${manageLink()}`;
   $("#tt").onclick=async e=>{
@@ -769,8 +1012,10 @@ function viewTestNew(){
       `<button class="chip${i?"":" on"}" data-k="${k}">${l}</button>`).join("")}</div></div>
   <div class="field" style="border-bottom:2px solid var(--ink)"><label>満点</label>
     <input id="mx" type="number" inputmode="numeric" value="100" min="1" max="1000" style="font-size:30px;font-weight:700">
-    <div class="chips" id="mq">${[10,20,50,100,500].map(n=>`<button class="chip" data-m="${n}">${n}</button>`).join("")}</div>
+    <div class="chips" id="mq">${[10,20,50,100].map(n=>`<button class="chip" data-m="${n}">${n}</button>`).join("")}</div>
   </div>
+  <div class="field"><label>目標（任意・あとから変えられます）</label>
+    <input id="gl" type="number" inputmode="numeric" placeholder="未設定"></div>
   <div id="dup"></div>
   <div class="note"><b>満点は後から変えられません。</b>満点が違うテストは、同じ名前でも別のテストとして記録されます。</div>
   <button class="btn" id="ok">このテストを作る</button>
@@ -800,7 +1045,13 @@ function viewTestNew(){
     if(!(max>0&&max<=1000)) return toast("満点は1〜1000で入れてください");
     if(mine(S.tests).some(t=>t.name===name&&t.max===max)) return toast("同じ名前・同じ満点のテストがすでにあります");
     const t={id:uid(),studentId:S.activeId,name,subjectId:pickedSubject,kind,max,archived:false};
-    S.tests.push(t); await saveNow(); go("rec",{t:t.id});
+    S.tests.push(t);
+    const gv=$("#gl").value;
+    if(String(gv).trim()!==""){
+      const gn=Math.round(+gv);
+      if(!isNaN(gn)&&gn>=0&&gn<=max) S.settings.goals[t.id]=gn;
+    }
+    await saveNow(); go("rec",{t:t.id});
   };
   $("#cc").onclick=()=>go("rec");
 }
@@ -831,25 +1082,13 @@ function viewRecDone(){
     <div class="stat"><span>記録した回数</span><b>${a.n}回</b></div>
     ${streak>1?`<div class="stat"><span>平均を超えた回数</span><b>${streak}回連続</b></div>`:""}
   </div>
-  ${a.enough&&a.goal!==null?`
-  <div class="card ink">
-    <p class="eyebrow" style="margin:0">次の目標</p>
-    <div style="display:flex;align-items:baseline;gap:10px;margin-top:2px">
-      <span class="goalv">${a.goal}点</span>
-      <span style="font-size:12.5px;color:var(--ink-soft)">${esc(a.goalNote)}</span>
-    </div>
-    <div class="chips"><button class="chip on">この目標にする</button><button class="chip" id="own">自分で決める</button></div>
-  </div>`:`<div class="note">記録が${MIN_N}回になると、次の目標が出せるようになります。あと${Math.max(0,MIN_N-a.n)}回。</div>`}
+  ${goalCard(t,a)}
   <button class="btn ghost" id="cl">閉じる</button>`;
-  const own=V.querySelector("#own");
-  if(own) own.onclick=async ()=>{
-    const v=await ask("目標にする点数",String(a.goal),{mode:"numeric"});
-    if(v===null) return;
-    const n=Math.round(+v);
-    if(isNaN(n)||n<0||n>t.max) return toast(`0〜${t.max}で入れてください`);
-    S.settings.goals[t.id]=n; save(); toast(`目標を${n}点にしました`);
+  V.onclick=async e=>{
+    const g=e.target.closest("[data-goal]");
+    if(g){ const cg=goalOf(t,a); if(await askGoal(t,cg?cg.v:null)) render(); return; }
+    if(e.target.closest("#cl")) go("rec",{t:t.id});
   };
-  $("#cl").onclick=()=>go("rec",{t:t.id});
 }
 
 /* ---------- テストの管理 ---------- */
@@ -952,7 +1191,7 @@ function viewAna(){
   <div class="vhead"><h1 class="t">分析</h1><p class="sub">比べる相手は、いつも過去の自分です。</p></div>
   <div class="chips" id="tt">${tests.map(t=>
     `<button class="chip${t.id===cur.id?" on":""}" data-t="${t.id}">${esc(shortName(t))}・${t.max}点</button>`).join("")}</div>
-  ${!a? `<div class="empty">このテストの記録はまだありません</div>` : `
+  ${!a? `<div class="empty">このテストの記録はまだありません</div>${goalCard(cur,null)}` : `
   ${group.length>1?`<div class="note">${group.length}つのテストを<b>まとめて</b>見ています（得点率でつないでいます）。</div>`:""}
   <p class="sec">得点率の推移</p>
   ${chart(a,group)}
@@ -960,31 +1199,21 @@ function viewAna(){
   <div class="card">
     <div class="stat"><span>記録した回数</span><b>${a.n}回</b></div>
     <div class="stat"><span>平均</span><b>${a.sameMax? a.avgScore.toFixed(1)+"点" : Math.round(a.avgRate)+"%"}</b></div>
-    <div class="stat"><span>まん中の値</span><b>${Math.round(a.medRate)}%</b></div>
+    <div class="stat"><span>中央値</span><b>${Math.round(a.medRate)}%</b></div>
     <div class="stat"><span>自己ベスト</span><b>${a.sameMax? a.best+"点" : Math.round(a.bestRate)+"%"}</b></div>
     <div class="stat"><span>直近3回の平均</span><b>${a.sameMax? a.recent3.toFixed(1)+"点" : Math.round(a.recent3Rate)+"%"}</b></div>
     ${a.enough?`<div class="stat"><span>ここ最近の傾向</span><b>${a.trend}</b></div>`:""}
   </div>
-  ${a.enough&&a.goal!==null?`
-  <div class="card ink">
-    <p class="eyebrow" style="margin:0">次の目標</p>
-    <div style="display:flex;align-items:baseline;gap:10px;margin-top:2px">
-      <span class="goalv">${S.settings.goals[cur.id]??a.goal}点</span>${a.goalMax!==cur.max?`<span style="font-size:11px;color:var(--ink-faint)">／${a.goalMax}点満点</span>`:""}
-      <span style="font-size:12.5px;color:var(--ink-soft)">${S.settings.goals[cur.id]?"自分で決めた目標":esc(a.goalNote)}</span>
-    </div>
-    <div class="chips"><button class="chip" id="own">目標を決め直す</button></div>
-  </div>`:`<div class="note">記録が${MIN_N}回になると、傾向と目標が出せるようになります。いまは${a.n}回。<br><b>少ない記録で線を引くと、実際より大きく見えてしまいます。</b></div>`}
+  ${goalCard(cur,a)}
+  ${a.enough?"":`<div class="note">記録が${MIN_N}回になると、傾向が出せるようになります。いまは${a.n}回。<br><b>少ない記録で線を引くと、実際より大きく見えてしまいます。</b></div>`}
   ${a.max<=20?`<div class="note"><b>${a.max}点満点は1問で${Math.round(100/a.max)}%動きます。</b>満点の大きいテストと同じようには比べられません。</div>`:""}
   `}
   <div class="note">このアプリは偏差値を出しません。比べる相手がいないためです。点数の予測もしません。</div>`;
   $("#tt").onclick=async e=>{const b=e.target.closest("[data-t]"); if(b) go("ana",{t:b.dataset.t});};
-  const own=V.querySelector("#own");
-  if(own) own.onclick=async ()=>{
-    const v=await ask("目標にする点数",String(S.settings.goals[cur.id]??a.goal),{mode:"numeric"});
-    if(v===null) return;
-    const n=Math.round(+v);
-    if(isNaN(n)||n<0||n>cur.max) return toast(`0〜${cur.max}で入れてください`);
-    S.settings.goals[cur.id]=n; await saveNow(); render();
+  const gb=V.querySelector("[data-goal]");
+  if(gb) gb.onclick=async ()=>{
+    const cg=goalOf(cur,a);
+    if(await askGoal(cur,cg?cg.v:null)) render();
   };
 }
 function chart(a,group){
@@ -1078,9 +1307,10 @@ function sheetHTML(from,to){
     return {t,n:rs.length,avg:Math.round(mean(sc)/t.max*100),last3:sc.slice(-3).join(" / ")};
   }).filter(Boolean);
   const small=rows.filter(r=>r.t.kind!=="term"), term=rows.filter(r=>r.t.kind==="term");
-  const tasks=mine(S.tasks).filter(x=>x.due&&x.due>=from&&x.due<=to&&x.kind!=="exam");
+  const tasks=mine(S.tasks).filter(x=>x.due&&x.due>=from&&x.due<=to);
   const late=tasks.filter(x=>!x.done||(x.doneAt&&x.doneAt>x.due)).length;
-  const unrec=mine(S.tasks).filter(x=>x.kind==="exam"&&x.due&&x.due>=from&&x.due<=to&&!x.done).length;
+  const unrec=mine(S.events).filter(e=>e.kind==="test"&&e.date&&e.date>=from&&e.date<=to
+    && !mine(S.records).some(r=>r.date===e.date)).length;
   const row=r=>`<tr><td>${esc(r.t.name)}</td><td class="num">${r.t.max}</td><td class="num">${r.n}</td>
     <td class="num">${r.n>=3? r.avg+"%" : "—"}</td><td class="num">${r.n>=3? esc(r.last3) : "記録が少ないため省略"}</td></tr>`;
   return `
@@ -1108,7 +1338,7 @@ function viewSet(){
     `<button class="chip${s.id===S.activeId?" on":""}" data-u="${s.id}">${esc(s.name)}（${esc(s.grade)}）</button>`).join("")}
     <button class="chip add" data-u="new">＋ 追加</button></div>
   <div class="rowsplit"><div><div class="k">${esc(me().name)}の記録を消す</div>
-    <div class="d">テスト${mine(S.tests).length}件・記録${mine(S.records).length}件・やること${mine(S.tasks).length}件</div></div>
+    <div class="d">テスト${mine(S.tests).length}件・記録${mine(S.records).length}件・やること${mine(S.tasks).length}件・予定${mine(S.events).length}件</div></div>
     <button class="chip" id="dels">削除</button></div>
   <p class="sec">まとめる</p>
   <div class="rowsplit"><div><div class="k">面談シートを作る</div><div class="d">A4・1枚のPDF</div></div>
@@ -1117,9 +1347,8 @@ function viewSet(){
   <div class="rowsplit"><div><div class="k">開くときにパスコード</div>
     <div class="d">${S.settings.pass?"設定ずみ":"未設定"}</div></div>
     <button class="sw ${S.settings.pass?"on":""}" id="pw"></button></div>
-  <div class="rowsplit"><div><div class="k">離れたら自動で閉じる</div><div class="d">${S.settings.autoLock}分</div></div>
-    <button class="chip" id="al">変える</button></div>
   <div class="note"><b>この番号は、記録を暗号化していません。</b>人目から隠すためのものです。<br>
+    番号を聞かれるのは、アプリを開いたときだけです。使っている途中で閉じることはありません。<br>
     3回まちがえると1時間後にパスコードなしで開けるので、忘れても記録が消えることはありません。</div>
   <p class="sec">引き継ぎ</p>
   ${last===null? `<div class="warn"><b>まだ一度も書き出していません。</b>いま端末を紛失すると、記録は戻せません。</div>`
@@ -1140,6 +1369,7 @@ function viewSet(){
     S.tests  =S.tests.filter(t=>t.studentId!==st.id);
     S.records=S.records.filter(r=>r.studentId!==st.id);
     S.tasks  =S.tasks.filter(t=>t.studentId!==st.id);
+    S.events =S.events.filter(e=>e.studentId!==st.id);
     S.students=S.students.filter(x=>x.id!==st.id);
     S.activeId=S.students.length? S.students[0].id : null;
     await saveNow(); go(S.students.length? "set" : "tasks");
@@ -1155,12 +1385,6 @@ function viewSet(){
   };
   $("#sh").onclick=()=>go("sheet");
   $("#tr").onclick=()=>go("transfer");
-  $("#al").onclick=async ()=>{
-    const v=await ask("何分で自動的に閉じますか",String(S.settings.autoLock),{mode:"numeric",note:"1〜30分"});
-    if(v===null) return; const n=Math.round(+v);
-    if(!(n>=1&&n<=30)) return toast("1〜30で入れてください");
-    S.settings.autoLock=n; await saveNow(); render();
-  };
   $("#pw").onclick=async()=>{
     if(S.settings.pass){ if(await ok("パスコードをやめますか",{okLabel:"やめる"})){ S.settings.pass=null; await saveNow(); render(); } return; }
     const a=await ask("パスコードを決める",null,{type:"password",mode:"numeric",max:4,ph:"4桁の数字"});
@@ -1314,17 +1538,9 @@ function drawLock(msg){
     }
   };
 }
+/* 放置していても自動では閉じない。ロックは起動時だけ。
+   使うたびに番号を求められる煩わしさのほうが、実害より大きいため。 */
 function touch(){ lastActive=Date.now(); }
-["click","keydown","touchstart","input"].forEach(ev=>
-  document.addEventListener(ev,touch,{passive:true}));
-setInterval(()=>{
-  if(!S||!S.settings.pass||locked) return;
-  if(Date.now()-lastActive > S.settings.autoLock*60000) lock();
-},5000);
-document.addEventListener("visibilitychange",()=>{
-  if(!S||!S.settings) return;
-  if(document.hidden) lastActive=Date.now()-S.settings.autoLock*60000+3000;
-});
 
 /* ============================================================
    7. 起動
@@ -1339,13 +1555,23 @@ function installHint(){
   try{ hidden = document.cookie.indexOf("nohint=1")>=0; }catch(e){}
   if(hidden) return;
   const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
-  box.innerHTML=`<div style="flex:1">${ios
-    ? '<b>ホーム画面に追加できます。</b>下の共有ボタン → 「ホーム画面に追加」。アプリと同じように開けて、記録も安全に残ります。'
-    : '<b>ホーム画面に追加できます。</b>メニュー →「アプリをインストール」または「ホーム画面に追加」。アプリと同じように開けます。'}</div>
+  box.innerHTML=`
+    <div style="flex:1">
+      <b>ホーム画面に置けます。</b><br>
+      <span style="opacity:.9">
+        ${ios
+          ? '① 下の <b>共有ボタン</b>（四角に上矢印）を押す<br>② 「<b>ホーム画面に追加</b>」を選ぶ<br>③ 右上の「<b>追加</b>」を押す'
+          : '① 右上の <b>メニュー</b>（点が3つ縦に並んだマーク）を押す<br>② 「<b>ホーム画面に追加</b>」を選ぶ'}
+      </span><br>
+      <span style="opacity:.7;font-size:11.5px">次からアイコンから開けます。ダウンロードするものではありません。</span>
+    </div>
     <button id="hintx" aria-label="閉じる">閉じる</button>`;
   box.classList.remove("hidden");
-  box.querySelector("#hintx").onclick=async ()=>{
+  document.body.classList.add("hint");
+  const x=box.querySelector("#hintx");
+  if(x) x.onclick=()=>{
     box.classList.add("hidden");
+    document.body.classList.remove("hint");
     try{ document.cookie="nohint=1;max-age=15552000;path=/"; }catch(e){}
   };
 }
